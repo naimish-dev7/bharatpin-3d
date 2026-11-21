@@ -1,9 +1,19 @@
 {
-  "name": "BharatPin 3D — India Navigation",
+  "name": "BharatPin 3D — India Navigation & DIGIPIN",
   "short_name": "BharatPin",
-  "start_url": ".",
+  "description": "3D Indian navigation, hybrid satellite map, and 10-character DIGIPIN Progressive Web App.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#060b16",
-  "theme_color": "#060b16",
-  "icons": []
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#047857",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
