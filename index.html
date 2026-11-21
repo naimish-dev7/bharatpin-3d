@@ -1,0 +1,3339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#047857" />
+  <title>BharatPin 3D — India Navigation & DIGIPIN</title>
+  <link rel="manifest" href="manifest.json" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <style>
+    :root {
+      --primary: #047857;
+      --primary-light: #10b981;
+      --primary-tint: #ecfdf5;
+      --teal-fab: #006c75;
+      --nav-blue: #1d4ed8;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --border: #e2e8f0;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --danger: #dc2626;
+      --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.16);
+      --shadow-float: 0 4px 14px rgba(15, 23, 42, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #e2e8f0;
+      color: var(--text-dark);
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .maplibregl-ctrl-bottom-left { display: none !important; }
+    .maplibregl-ctrl-bottom-right {
+      bottom: 122px !important;
+      right: 72px !important;
+      z-index: 15 !important;
+    }
+    .maplibregl-ctrl-scale {
+      background: rgba(15, 23, 42, 0.55) !important;
+      color: #ffffff !important;
+      border-color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 10px !important;
+      border-radius: 3px;
+      padding: 0 5px !important;
+    }
+
+    /* TOP SEARCH PILL & CATEGORY CHIPS */
+    .top-bar-wrap {
+      position: fixed;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      z-index: 26;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .search-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 8px 5px 12px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .brand-pin-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    .search-pill input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 0.88rem;
+      color: var(--text-dark);
+      padding: 7px 4px;
+      min-width: 0;
+    }
+
+    .pill-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--text-dark);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .pill-icon-btn:active { background: #f1f5f9; }
+    .pill-icon-btn.listening { background: #fee2e2; color: var(--danger); }
+
+    .clear-input-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      display: none;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .search-results {
+      margin-top: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      display: none;
+      max-height: 245px;
+      overflow-y: auto;
+    }
+
+    .search-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    .search-item:last-child { border-bottom: none; }
+    .search-item:hover { background: var(--primary-tint); }
+
+    .chips-row {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-top: 8px;
+      padding-bottom: 2px;
+    }
+    .chips-row::-webkit-scrollbar { display: none; }
+
+    .cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-float);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cat-chip.saved-chip {
+      border-color: #a7f3d0;
+      background: var(--primary-tint);
+      color: #065f46;
+    }
+    .cat-chip.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* RIGHT UPPER CONTROL STACK */
+    .right-upper-stack {
+      position: fixed;
+      right: 12px;
+      top: 112px;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .circle-ctrl {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dark);
+      display: grid;
+      place-items: center;
+      box-shadow: var(--shadow-float);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+    .circle-ctrl:active { transform: scale(0.94); }
+    .circle-ctrl.layers-tint {
+      background: #dbeafe;
+      color: #1e3a8a;
+      border-color: #bfdbfe;
+    }
+    .circle-ctrl.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* BOTTOM-LEFT STREET VIEW THUMBNAIL */
+    .sv-thumb-card {
+      position: fixed;
+      left: 12px;
+      bottom: 126px;
+      z-index: 24;
+      width: 86px;
+      height: 60px;
+      border-radius: 12px;
+      border: 2.5px solid #ffffff;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      background: #0f172a;
+      cursor: pointer;
+    }
+    .sv-thumb-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .sv-badge {
+      position: absolute;
+      left: 5px;
+      bottom: 4px;
+      background: rgba(15, 23, 42, 0.72);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 1px 6px;
+      font-size: 0.58rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* BOTTOM-RIGHT GOOGLE MAPS FABS (GPS + DIRECTIONS) */
+    .bottom-right-fabs {
+      position: fixed;
+      right: 14px;
+      bottom: 126px;
+      z-index: 24;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .gps-fab {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: #1d4ed8;
+      display: grid;
+      place-items: center;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+    }
+
+    .dir-fab {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: var(--teal-fab);
+      border: none;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+    }
+
+    /* DISTANCE RULER BANNER */
+    .ruler-banner {
+      position: fixed;
+      top: 112px;
+      left: 12px;
+      right: 64px;
+      z-index: 27;
+      max-width: 460px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 14px;
+      padding: 10px 13px;
+      box-shadow: var(--shadow-card);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* GOOGLE MAPS STYLE MAP TYPE & DETAILS BOTTOM SHEET */
+    .layers-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .layers-sheet {
+      width: 100%;
+      max-width: 540px;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      padding: 16px 18px 22px;
+      box-shadow: 0 -12px 36px rgba(15, 23, 42, 0.22);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .sheet-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .sheet-heading {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .map-type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .map-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px 8px;
+      margin-top: 12px;
+    }
+
+    .layer-tile-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-dark);
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .layer-thumb {
+      width: 58px;
+      height: 58px;
+      border-radius: 15px;
+      border: 2.5px solid transparent;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: #f1f5f9;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      transition: border-color 0.15s;
+    }
+
+    .layer-tile-btn.active .layer-thumb {
+      border-color: var(--teal-fab);
+      box-shadow: 0 0 0 2px rgba(0, 108, 117, 0.18);
+    }
+
+    .layer-tile-btn.active span {
+      color: var(--teal-fab);
+      font-weight: 800;
+    }
+
+    /* EXPANDABLE EXPLORE / LOCAL VIBE DOCK */
+    .explore-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 23;
+      max-width: 540px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 22px 22px 0 0;
+      padding: 8px 16px 8px;
+      box-shadow: 0 -8px 26px rgba(15, 23, 42, 0.15);
+      transition: max-height 0.25s ease;
+    }
+
+    .dock-drag-area {
+      cursor: pointer;
+      padding-bottom: 4px;
+    }
+
+    .dock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .dock-naqi-chip {
+      text-align: right;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 4px 10px;
+      flex-shrink: 0;
+    }
+
+    .dock-expanded-body {
+      display: none;
+      max-height: 54vh;
+      overflow-y: auto;
+      padding-bottom: 10px;
+      margin-bottom: 6px;
+    }
+
+    .explore-dock.expanded .dock-expanded-body {
+      display: block;
+    }
+
+    .picks-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 0 8px;
+    }
+    .picks-row::-webkit-scrollbar { display: none; }
+
+    .pick-card {
+      width: 235px;
+      flex-shrink: 0;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      cursor: pointer;
+    }
+
+    .pick-img-wrap {
+      position: relative;
+      height: 124px;
+      background: #0f172a;
+    }
+    .pick-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .pick-tag {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--text-dark);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+    }
+    .pick-quote {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      background: rgba(255, 255, 255, 0.93);
+      border-radius: 12px;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      line-height: 1.28;
+    }
+    .pick-meta {
+      padding: 9px 11px;
+    }
+
+    .sight-card {
+      width: 164px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      cursor: pointer;
+    }
+    .sight-card img {
+      width: 100%;
+      height: 92px;
+      object-fit: cover;
+      display: block;
+      background: #cbd5e1;
+    }
+
+    .see-more-btn {
+      width: 100%;
+      padding: 9px;
+      border-radius: 999px;
+      border: none;
+      background: #e2e8f0;
+      color: var(--text-dark);
+      font-size: 0.79rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin: 4px 0 12px;
+    }
+
+    .dock-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 6px;
+    }
+
+    .dock-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .dock-tab.active { color: var(--teal-fab); }
+    .dock-tab.active .dock-pill {
+      background: #cffafe;
+      padding: 3px 18px;
+      border-radius: 999px;
+    }
+
+    /* ROUTE PLANNER HEADER */
+    .route-header-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 35;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+      padding: 10px 12px 12px;
+      max-width: 540px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .mode-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .mode-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 2px;
+      border: none;
+      background: transparent;
+      border-bottom: 2.5px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mode-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .od-box { display: flex; align-items: center; gap: 8px; }
+    .od-inputs { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .od-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 0.81rem;
+      font-weight: 600;
+    }
+    .dot-origin {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--primary-light); box-shadow: 0 0 0 3px #d1fae5; flex-shrink: 0;
+    }
+    .dot-dest {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--danger); flex-shrink: 0;
+    }
+
+    /* BOTTOM PLACE & DIGIPIN CARD */
+    .bottom-card {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 32;
+      max-width: 540px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 24px 24px 0 0;
+      padding: 10px 16px 16px;
+      box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.18);
+      display: none;
+      max-height: 78vh;
+      overflow-y: auto;
+    }
+
+    .drag-pill {
+      width: 36px;
+      height: 4px;
+      background: #cbd5e1;
+      border-radius: 999px;
+      margin: 0 auto 8px;
+    }
+
+    .place-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .place-title-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .place-name {
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 1.22;
+    }
+
+    .place-addr {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .speak-place-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: var(--teal-fab);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .quick-action-pills {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-top: 10px;
+      padding-bottom: 2px;
+    }
+    .quick-action-pills::-webkit-scrollbar { display: none; }
+
+    .pill-cta-teal {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--teal-fab);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pill-cta-soft {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: none;
+      background: #e0f2fe;
+      color: #0f172a;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .env-pills {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .wx-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .aqi-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--primary-tint);
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .preset-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      cursor: pointer;
+    }
+
+    .photo-collage {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      grid-template-rows: 92px 92px;
+      gap: 6px;
+      margin-top: 12px;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .photo-collage img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #e2e8f0;
+      display: block;
+    }
+    .photo-main { grid-row: span 2; }
+
+    .info-gray-card {
+      margin-top: 10px;
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 11px 13px;
+      font-size: 0.79rem;
+      line-height: 1.42;
+      color: #334155;
+    }
+
+    .accordion-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 0.84rem;
+      color: #0f172a;
+      cursor: pointer;
+    }
+
+    .accordion-body {
+      margin-top: 8px;
+      font-size: 0.77rem;
+      color: #475569;
+      display: none;
+    }
+
+    .stay-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-top: 1px solid #e2e8f0;
+      cursor: pointer;
+    }
+
+    .digipin-box {
+      margin-top: 10px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .digipin-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--surface);
+      font-size: 0.79rem;
+      font-weight: 700;
+      gap: 8px;
+    }
+    .digipin-row + .digipin-row {
+      border-top: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+
+    .pin-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .mini-icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .cta-strip { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-teal {
+      flex: 1.3;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.87rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+    }
+    .btn-outline {
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-dark);
+      font-size: 0.81rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* AVAILABLE ROUTES SHEET */
+    .routes-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 36;
+      max-width: 540px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 24px 24px 0 0;
+      padding: 14px 16px 18px;
+      box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.18);
+      display: none;
+      max-height: 62vh;
+      overflow-y: auto;
+    }
+
+    .route-option {
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 11px 13px;
+      margin-top: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .route-option.selected {
+      border-color: var(--primary);
+      background: var(--primary-tint);
+    }
+    .transit-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-right: 4px;
+    }
+
+    /* ACTIVE NAVIGATION HUD */
+    .turn-banner {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 45;
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--nav-blue);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 13px 15px;
+      box-shadow: 0 12px 32px rgba(29, 78, 216, 0.4);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .turn-main { display: flex; align-items: center; gap: 10px; }
+    .hud-pill-btn {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      color: #ffffff;
+      padding: 6px 8px;
+      border-radius: 10px;
+      font-size: 0.67rem;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .lane-strip {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .junction-card {
+      position: fixed;
+      top: 130px;
+      left: 12px;
+      right: 12px;
+      z-index: 42;
+      max-width: 520px;
+      margin: 0 auto;
+      background: #0f172a;
+      border: 2px solid #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      display: none;
+    }
+
+    .speed-cluster {
+      position: fixed;
+      left: 14px;
+      bottom: 104px;
+      z-index: 42;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .speed-now {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #0f172a; color: #ffffff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.94rem; box-shadow: var(--shadow-float);
+    }
+    .speed-limit-sign {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #ffffff; border: 5px solid var(--danger);
+      color: #0f172a; display: grid; place-items: center;
+      font-weight: 900; font-size: 1rem; box-shadow: var(--shadow-float);
+    }
+
+    .safety-popup {
+      position: fixed;
+      right: 14px;
+      top: 290px;
+      z-index: 43;
+      background: var(--surface);
+      border: 2px solid var(--danger);
+      border-radius: 16px;
+      padding: 10px 13px;
+      text-align: center;
+      box-shadow: var(--shadow-card);
+      display: none;
+      max-width: 142px;
+    }
+
+    .safety-confirm-bar {
+      position: fixed;
+      bottom: 84px;
+      left: 12px;
+      right: 12px;
+      z-index: 44;
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 11px 14px;
+      box-shadow: var(--shadow-card);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-footer {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 45;
+      max-width: 520px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 11px 14px;
+      box-shadow: var(--shadow-card);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 65;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 18px;
+      width: 100%;
+      max-width: 390px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .hazard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .hazard-opt {
+      padding: 12px 6px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: var(--surface-soft);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      cursor: pointer;
+    }
+
+    .sheet-footer {
+      text-align: center;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.77rem;
+      font-weight: 700;
+      display: none;
+      box-shadow: var(--shadow-card);
+      white-space: nowrap;
+      max-width: 92vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="toast" class="toast"></div>
+
+  <!-- TOP SEARCH PILL & CHIPS -->
+  <div class="top-bar-wrap" id="topSearchWrap">
+    <div class="search-pill">
+      <div class="brand-pin-badge">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#047857"/><circle cx="12" cy="9" r="3" fill="#ffffff"/></svg>
+      </div>
+      <input id="searchInput" type="text" placeholder="Search here, PIN (242001), or DIGIPIN" autocomplete="off" />
+      <button type="button" class="clear-input-btn" id="clearSearchBtn" title="Clear">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <button type="button" class="pill-icon-btn" id="voiceSearchBtn" title="Voice Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+      </button>
+      <button type="button" class="pill-icon-btn" id="openGeotagCamBtn" title="Geotag App Camera">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      </button>
+    </div>
+
+    <div id="searchResults" class="search-results"></div>
+
+    <div class="chips-row" id="categoryChips">
+      <button type="button" class="cat-chip" data-amenity="restaurant">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+        <span>Restaurants</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="fuel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M15 10h2a2 2 0 0 1 2 2v4a2 2 0 0 0 4 0V9l-3-3"/></svg>
+        <span>Petrol</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="hotel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>
+        <span>Hotels</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="shopping">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>Shopping</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="hospital">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 6v12M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>
+        <span>Hospital</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="atm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <span>ATM</span>
+      </button>
+      <button type="button" class="cat-chip" data-amenity="station">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/></svg>
+        <span>Station</span>
+      </button>
+      <button type="button" class="cat-chip saved-chip" id="homeChip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span>Home</span>
+      </button>
+      <button type="button" class="cat-chip saved-chip" id="workChip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Work</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- DISTANCE RULER BANNER -->
+  <div class="ruler-banner" id="rulerBanner">
+    <span id="rulerDistText">Tap map points to measure: 0 m</span>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button type="button" id="clearRulerBtn" style="background:rgba(255,255,255,0.16);border:none;color:#fff;padding:5px 9px;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Clear</button>
+      <button type="button" id="closeRulerBtn" style="background:#dc2626;border:none;color:#fff;padding:5px 9px;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Done</button>
+    </div>
+  </div>
+
+  <!-- RIGHT UPPER CONTROLS -->
+  <div class="right-upper-stack" id="rightUpperStack">
+    <button type="button" class="circle-ctrl layers-tint" id="layerToggleBtn" title="Map Type & Details">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+    </button>
+    <button type="button" class="circle-ctrl" id="compassBtn" title="Snap North">
+      <svg id="compassNeedle" width="20" height="20" viewBox="0 0 24 24" fill="none"><polygon points="12 2 15 12 12 10 9 12 12 2" fill="#dc2626"/><polygon points="12 22 15 12 12 14 9 12 12 22" fill="#94a3b8"/></svg>
+    </button>
+    <button type="button" class="circle-ctrl" id="rulerToggleBtn" title="Measure Distance">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/></svg>
+    </button>
+    <button type="button" class="circle-ctrl" id="reportAlertBtn" title="Report Safety Alert">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+  </div>
+
+  <!-- BOTTOM-LEFT STREET VIEW THUMBNAIL -->
+  <div class="sv-thumb-card" id="streetViewThumb" title="Open Street View Preview">
+    <img id="svThumbImg" alt="Street preview" />
+    <span class="sv-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg>
+      <span>360°</span>
+    </span>
+  </div>
+
+  <!-- BOTTOM-RIGHT FABS (GPS + DIRECTIONS) -->
+  <div class="bottom-right-fabs" id="bottomRightFabs">
+    <button type="button" class="gps-fab" id="gpsCenterBtn" title="My Device Location">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+    </button>
+    <button type="button" class="dir-fab" id="quickRouteBtn" title="Directions">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4"><rect x="4" y="4" width="16" height="16" rx="3" transform="rotate(45 12 12)"/><path d="M9 13v-2a1 1 0 0 1 1-1h5"/><path d="m13 8 2 2-2 2"/></svg>
+    </button>
+  </div>
+
+  <!-- GOOGLE MAPS STYLE MAP TYPE & DETAILS SHEET -->
+  <div class="layers-sheet-backdrop" id="layersSheetBackdrop">
+    <div class="layers-sheet" id="layersSheet">
+      <div class="sheet-title-bar">
+        <span class="sheet-heading">Map type</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" class="preset-btn" id="nightModeToggleBtn">Night Mode</button>
+          <button type="button" class="mini-icon-btn" id="closeLayersSheetBtn" style="border:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="map-type-grid">
+        <button type="button" class="layer-tile-btn map-type-card active" data-style="liberty">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#f1f5f9"/><path d="M0 16 Q26 20 34 0 L58 0 L58 26 Q34 32 22 58 L0 58 Z" fill="#a7f3d0"/><path d="M0 44 L58 14" stroke="#ffffff" stroke-width="6"/><path d="M18 0 L38 58" stroke="#94a3b8" stroke-width="3"/></svg>
+          </div>
+          <span>Default</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-type-card" data-style="satellite">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#365314"/><path d="M0 12 Q28 24 58 46" stroke="#78716c" stroke-width="11" fill="none"/><path d="M0 12 Q28 24 58 46" stroke="#f8fafc" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/><rect x="8" y="34" width="16" height="14" rx="2" fill="#4d7c0f"/></svg>
+          </div>
+          <span>Satellite</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-type-card" data-style="terrain">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#d6d3d1"/><path d="M0 42 L18 18 L34 36 L46 22 L58 40 L58 58 L0 58 Z" fill="#78716c"/><path d="M8 58 C18 32 32 16 44 58" stroke="#ffffff" stroke-width="4" fill="none"/></svg>
+          </div>
+          <span>Terrain</span>
+        </button>
+      </div>
+
+      <div style="margin-top:14px;">
+        <span class="sheet-heading">Map details</span>
+      </div>
+
+      <div class="map-detail-grid">
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="transit">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#f8fafc"/><line x1="0" y1="26" x2="58" y2="26" stroke="#7c3aed" stroke-width="4"/><line x1="0" y1="36" x2="58" y2="36" stroke="#2563eb" stroke-width="3"/><rect x="34" y="10" width="14" height="14" rx="3" fill="#2563eb"/><text x="41" y="20" text-anchor="middle" fill="#fff" font-size="9" font-weight="800">M</text></svg>
+          </div>
+          <span>Public transit</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="traffic">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#ecfdf5"/><path d="M26 0 V24 Q26 30 0 30" stroke="#10b981" stroke-width="5" fill="none"/><path d="M32 58 V32 Q32 28 58 28" stroke="#ef4444" stroke-width="5" fill="none"/><path d="M40 28 H58" stroke="#f59e0b" stroke-width="5"/></svg>
+          </div>
+          <span>Traffic</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="bicycling">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#dcfce7"/><circle cx="29" cy="29" r="12" stroke="#15803d" stroke-width="4" fill="none"/><line x1="0" y1="29" x2="17" y2="29" stroke="#15803d" stroke-width="4"/><line x1="41" y1="29" x2="58" y2="29" stroke="#15803d" stroke-width="4"/></svg>
+          </div>
+          <span>Bicycling</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card active" data-detail="buildings3d">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#f1f5f9"/><polygon points="10,28 24,20 38,28 24,36" fill="#cbd5e1"/><polygon points="10,28 24,36 24,48 10,40" fill="#94a3b8"/><polygon points="24,36 38,28 38,40 24,48" fill="#64748b"/><polygon points="28,18 40,12 50,18 38,24" fill="#e2e8f0"/><polygon points="28,18 38,24 38,44 28,38" fill="#94a3b8"/><polygon points="38,24 50,18 50,38 38,44" fill="#475569"/></svg>
+          </div>
+          <span>Raised buildings</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="streetview">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#e0f2fe"/><path d="M0 44 L58 14" stroke="#0284c7" stroke-width="7"/><circle cx="29" cy="18" r="6" fill="#f59e0b"/><rect x="23" y="25" width="12" height="16" rx="4" fill="#f59e0b"/></svg>
+          </div>
+          <span>Street View</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="wildfires">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#eff6ff"/><circle cx="29" cy="29" r="18" fill="#dc2626"/><path d="M29 17 C33 23 36 27 36 32 A7 7 0 1 1 22 32 C22 27 25 23 29 17 Z" fill="#ffffff"/></svg>
+          </div>
+          <span>Wildfires</span>
+        </button>
+        <button type="button" class="layer-tile-btn map-detail-card" data-detail="aqi">
+          <div class="layer-thumb">
+            <svg width="58" height="58" viewBox="0 0 58 58"><rect width="58" height="58" fill="#ecfdf5"/><circle cx="29" cy="29" r="18" fill="#4d7c0f"/><path d="M20 24 Q24 21 29 24 T38 24 M20 30 Q24 27 29 30 T38 30 M20 36 Q24 33 29 36 T38 36" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+          </div>
+          <span>Air Quality</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPANDABLE EXPLORE / LOCAL VIBE BOTTOM DOCK -->
+  <div class="explore-dock" id="exploreDock">
+    <div class="dock-drag-area" id="dockDragToggle">
+      <div class="drag-pill"></div>
+      <div class="dock-header">
+        <div style="min-width:0;">
+          <div style="font-size:1.08rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="dockAreaTitle">Shahjahanpur • Azizganj</div>
+          <div style="font-size:0.65rem;color:#94a3b8;font-weight:600;">Tap to explore local picks • created by naimish.dev</div>
+        </div>
+        <div class="dock-naqi-chip">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:0.84rem;font-weight:800;color:#0f172a;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b"><circle cx="12" cy="12" r="6"/></svg>
+            <span id="dockTempVal">--°</span>
+          </div>
+          <div style="font-size:0.68rem;font-weight:800;color:#ca8a04;" id="dockAqiVal">-- NAQI</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPANDED EXPLORE BODY (LOCAL PICKS + SIGNATURE SIGHTS) -->
+    <div class="dock-expanded-body" id="dockExpandedBody">
+      <div id="explorePicksSection">
+        <div class="picks-row" id="localPicksRow"></div>
+        <button type="button" class="see-more-btn" id="seeMorePicksBtn">See more nearby places ›</button>
+        <div style="font-size:0.95rem;font-weight:800;color:#0f172a;margin-bottom:6px;">Signature sights</div>
+        <div class="picks-row" id="signatureSightsRow"></div>
+      </div>
+      <div id="dockSavedBody" style="display:none;padding:6px 0;"></div>
+    </div>
+
+    <div class="dock-tabs">
+      <button type="button" class="dock-tab active" id="dockExploreBtn">
+        <span class="dock-pill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+        <span>Explore</span>
+      </button>
+      <button type="button" class="dock-tab" id="dockSavedBtn">
+        <span class="dock-pill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></span>
+        <span>You</span>
+      </button>
+      <button type="button" class="dock-tab" id="dockContributeBtn">
+        <span class="dock-pill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+        <span>Contribute</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MULTIMODAL ROUTE PLANNER HEADER -->
+  <div class="route-header-panel" id="routeHeaderPanel">
+    <div class="mode-bar">
+      <button type="button" class="mode-tab active" data-mode="car">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        <span>Car</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="bike">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+        <span>Bike</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="truck">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+        <span>Truck</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="walk">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg>
+        <span>Walk</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="metro">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+        <span>Metro/Bus</span>
+      </button>
+    </div>
+
+    <div class="od-box">
+      <button type="button" class="mini-icon-btn" id="closeRoutingBtn" title="Back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="od-inputs">
+        <div class="od-row">
+          <span class="dot-origin"></span>
+          <span id="originLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Your current location</span>
+        </div>
+        <div class="od-row">
+          <span class="dot-dest"></span>
+          <span id="destLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select destination</span>
+        </div>
+      </div>
+      <button type="button" class="mini-icon-btn" id="swapOdBtn" title="Swap Origin and Destination">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM PLACE & OFFICIAL DIGIPIN CARD -->
+  <div class="bottom-card" id="placeCard">
+    <div class="drag-pill"></div>
+    <div class="place-top">
+      <div style="min-width:0;">
+        <div class="place-title-row">
+          <div class="place-name" id="placeTitle">Selected Location</div>
+          <button type="button" class="speak-place-btn" id="speakPlaceBtn" title="Pronounce Name">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          </button>
+        </div>
+        <div class="place-addr" id="placeSub">Uttar Pradesh, India</div>
+      </div>
+      <button type="button" class="mini-icon-btn" id="closePlaceCardBtn" title="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="quick-action-pills">
+      <button type="button" class="pill-cta-teal" id="openDirectionsBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        <span>Directions</span>
+      </button>
+      <button type="button" class="pill-cta-soft" id="directStartBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 20 20 12 16 4 20 12 4"/></svg>
+        <span>Start</span>
+      </button>
+      <button type="button" class="pill-cta-soft" id="sharePinBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span>Share</span>
+      </button>
+      <button type="button" class="pill-cta-soft" id="saveAsHomeBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        <span>Save</span>
+      </button>
+    </div>
+
+    <div class="env-pills">
+      <span class="wx-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2m-7.07-2.93 1.41-1.41m11.32-11.32 1.41-1.41M2 12h2m16 0h2"/></svg>
+        <span id="destTempText">Syncing weather...</span>
+      </span>
+      <span class="aqi-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+        <span id="destAqiText">NAQI --</span>
+      </span>
+      <button type="button" class="preset-btn" id="saveAsWorkBtn" style="margin-left:auto;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Set Work</span>
+      </button>
+    </div>
+
+    <div class="photo-collage">
+      <img id="photoSlot0" class="photo-main" alt="Location preview" />
+      <img id="photoSlot1" alt="Landmark view" />
+      <img id="photoSlot2" alt="Street view" />
+    </div>
+
+    <div class="info-gray-card">
+      <div id="placeSummaryText">Explore local landmarks, routes, and official DIGIPIN coordinates across India.</div>
+    </div>
+
+    <div class="info-gray-card">
+      <div class="accordion-head" id="whenToVisitToggle">
+        <span style="display:flex;align-items:center;gap:7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>When to visit</span>
+        </span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="accordion-body" id="whenToVisitBody">
+        <div style="font-weight:800;color:#047857;">Peak season · Nov – Mar</div>
+        <div>Pleasant weather across North & Central India; popular season for sightseeing and festivals.</div>
+      </div>
+    </div>
+
+    <div class="info-gray-card">
+      <div class="accordion-head" id="whereToStayToggle">
+        <span style="display:flex;align-items:center;gap:7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>
+          <span>Where to stay</span>
+        </span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="accordion-body" id="whereToStayBody">Tap to load nearby hotels & stays...</div>
+    </div>
+
+    <div class="digipin-box">
+      <div class="digipin-row">
+        <span>DIGIPIN: <strong id="digiPinText" style="color:#047857;letter-spacing:0.4px;">---</strong></span>
+        <div class="pin-actions">
+          <button type="button" class="mini-icon-btn" id="copyDigiPinBtn" title="Copy DIGIPIN">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button type="button" class="mini-icon-btn" id="qrPinBtn" title="QR Code">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zm4 4h3v3h-3z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="digipin-row">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">BharatPin: <strong id="bharatUrlText" style="color:#1d4ed8;">?pin=---</strong></span>
+        <div class="pin-actions">
+          <button type="button" class="mini-icon-btn" id="geotagHereBtn" title="Geotag Photo Stamp">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet-footer">created by naimish.dev • BharatPin 3D</div>
+  </div>
+
+  <!-- AVAILABLE ROUTES SHEET -->
+  <div class="routes-sheet" id="routesSheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span style="font-weight:800;font-size:0.94rem;">Available Routes <span id="routeCountBadge" style="background:#047857;color:#fff;padding:1px 7px;border-radius:999px;font-size:0.74rem;">0</span></span>
+      <select id="fuelTypeSelect" style="border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px;font-size:0.75rem;font-weight:700;background:#fff;color:#0f172a;">
+        <option value="petrol">Petrol (₹96/L)</option>
+        <option value="diesel">Diesel (₹89/L)</option>
+        <option value="cng">CNG (₹76/kg)</option>
+        <option value="ev">EV (₹1.2/km)</option>
+      </select>
+    </div>
+
+    <div id="routesListContainer"></div>
+
+    <div class="cta-strip">
+      <button type="button" class="btn-teal" id="startNavBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        <span>Start</span>
+      </button>
+      <button type="button" class="btn-outline" id="toggleStepsBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>Steps</span>
+      </button>
+    </div>
+
+    <div id="turnStepsList" style="display:none;max-height:140px;overflow-y:auto;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:0.77rem;"></div>
+    <div class="sheet-footer">created by naimish.dev • BharatPin 3D</div>
+  </div>
+
+  <!-- ACTIVE TURN-BY-TURN NAVIGATION HUD -->
+  <div class="turn-banner" id="turnBanner">
+    <div class="turn-main">
+      <svg id="turnArrowSvg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+        <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+      </svg>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:1.3rem;font-weight:900;line-height:1.1;" id="hudDist">250 m</div>
+        <div style="font-size:0.84rem;font-weight:600;opacity:0.95;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="hudInstruction">Follow highlighted route</div>
+      </div>
+      <button type="button" id="voiceLangBtn" class="hud-pill-btn">EN Voice</button>
+      <button type="button" id="toggleJunctionBtn" class="hud-pill-btn">3D View</button>
+    </div>
+    <div class="lane-strip">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.4"><path d="M12 19V9l-5-5"/><path d="M7 9V4h5"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.4"><path d="M12 19V9l5-5"/><path d="M17 9V4h-5"/></svg>
+    </div>
+  </div>
+
+  <!-- 3D JUNCTION VIEW PIP CARD -->
+  <div class="junction-card" id="junctionCard">
+    <svg width="100%" height="144" viewBox="0 0 360 144" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0284c7"/>
+          <stop offset="100%" stop-color="#bae6fd"/>
+        </linearGradient>
+      </defs>
+      <rect width="360" height="80" fill="url(#skyGrad)"/>
+      <rect y="80" width="360" height="64" fill="#475569"/>
+      <line x1="28" y1="80" x2="28" y2="14" stroke="#cbd5e1" stroke-width="4"/>
+      <line x1="332" y1="80" x2="332" y2="14" stroke="#cbd5e1" stroke-width="4"/>
+      <polygon points="142,80 218,80 330,144 30,144" fill="#1e293b"/>
+      <line x1="180" y1="80" x2="180" y2="144" stroke="#facc15" stroke-width="2.5" stroke-dasharray="8 6"/>
+      <line x1="142" y1="80" x2="30" y2="144" stroke="#ffffff" stroke-width="3"/>
+      <line x1="218" y1="80" x2="330" y2="144" stroke="#ffffff" stroke-width="3"/>
+      <polygon points="212,102 222,118 202,118" fill="#facc15"/>
+      <rect x="34" y="12" width="134" height="36" rx="4" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+      <text x="101" y="34" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="800" font-family="sans-serif">Service Lane</text>
+      <rect x="176" y="12" width="150" height="36" rx="4" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+      <text x="251" y="34" text-anchor="middle" fill="#ffffff" font-size="11.5" font-weight="800" font-family="sans-serif" id="junctionSignText">Main Flyover</text>
+      <rect x="0" y="118" width="360" height="26" fill="rgba(15,23,42,0.78)"/>
+      <text x="14" y="135" fill="#94a3b8" font-size="10.5" font-weight="700" font-family="sans-serif">3D JUNCTION PREVIEW</text>
+      <text x="346" y="136" text-anchor="end" fill="#ffffff" font-size="14" font-weight="900" font-family="sans-serif" id="junctionDistText">100 m</text>
+    </svg>
+  </div>
+
+  <!-- SPEEDOMETER & SPEED LIMIT CLUSTER -->
+  <div class="speed-cluster" id="speedCluster">
+    <div class="speed-now">
+      <span id="liveSpeedVal">0</span>
+      <span style="font-size:0.55rem;opacity:0.75;">km/h</span>
+    </div>
+    <div class="speed-limit-sign">60</div>
+  </div>
+
+  <!-- SAFETY POPUP & CROWDSOURCED PROMPT -->
+  <div class="safety-popup" id="safetyPopup">
+    <div style="font-size:0.7rem;font-weight:800;color:#0f172a;line-height:1.2;">Traffic Monitoring Camera</div>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.3" style="margin:5px auto;display:block;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div style="font-size:0.86rem;font-weight:900;color:#dc2626;">150 m</div>
+  </div>
+
+  <div class="safety-confirm-bar" id="safetyConfirmBar">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span style="font-size:0.8rem;font-weight:800;">Speedbreaker ahead — Are they still there?</span>
+      <button type="button" id="dismissConfirmBtn" class="mini-icon-btn" style="width:24px;height:24px;border:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button type="button" id="confirmNoBtn" style="padding:8px;border-radius:999px;border:none;background:#ecfdf5;color:#047857;font-weight:800;font-size:0.8rem;cursor:pointer;">No</button>
+      <button type="button" id="confirmYesBtn" style="padding:8px;border-radius:999px;border:none;background:#047857;color:#ffffff;font-weight:800;font-size:0.8rem;cursor:pointer;">Yes</button>
+    </div>
+  </div>
+
+  <!-- NAVIGATION FOOTER -->
+  <div class="nav-footer" id="navFooter">
+    <div style="min-width:0;">
+      <div style="font-size:1.15rem;font-weight:900;color:#047857;" id="footerEta">-- min</div>
+      <div style="font-size:0.74rem;color:#64748b;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="footerSub">-- km • ETA --:--</div>
+    </div>
+    <div style="display:flex;gap:7px;flex-shrink:0;">
+      <button type="button" id="simDriveBtn" style="padding:9px 13px;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;font-size:0.77rem;font-weight:800;cursor:pointer;">Simulate Drive</button>
+      <button type="button" id="exitNavBtn" style="padding:9px 15px;border-radius:999px;border:none;background:#dc2626;color:#ffffff;font-size:0.77rem;font-weight:800;cursor:pointer;">Exit</button>
+    </div>
+  </div>
+
+  <!-- GEOTAG CAMERA & QR MODAL -->
+  <div class="modal-backdrop" id="geotagModal">
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:800;font-size:0.94rem;" id="modalHeaderTitle">BharatPin Geotag Camera</span>
+        <button type="button" id="closeModalBtn" class="mini-icon-btn" style="width:28px;height:28px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <canvas id="geotagCanvas" width="340" height="250" style="width:100%;border-radius:14px;border:1px solid #cbd5e1;background:#0f172a;display:block;"></canvas>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <label class="btn-outline" style="flex:1;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          <span>Snap / Pick</span>
+          <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none;" />
+        </label>
+        <button type="button" class="btn-teal" id="downloadGeotagBtn" style="flex:1;">Save PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STREET VIEW PREVIEW MODAL -->
+  <div class="modal-backdrop" id="streetViewModal">
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:800;font-size:0.94rem;" id="svModalTitle">Street-Level Preview</span>
+        <button type="button" id="closeSvModalBtn" class="mini-icon-btn" style="width:28px;height:28px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <img id="svModalImg" style="width:100%;height:220px;object-fit:cover;border-radius:14px;background:#0f172a;display:block;" alt="Street level view" />
+      <div id="svModalSub" style="font-size:0.76rem;color:#475569;margin-top:8px;font-weight:600;">Nearest mapped landmark photography via Wikimedia Commons</div>
+    </div>
+  </div>
+
+  <!-- REPORT SAFETY ALERT MODAL -->
+  <div class="modal-backdrop" id="reportModal">
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:800;font-size:0.94rem;">Contribute Safety Alert</span>
+        <button type="button" id="closeReportModalBtn" class="mini-icon-btn" style="width:28px;height:28px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="hazard-grid">
+        <button type="button" class="hazard-opt" data-hazard="Speedbreaker">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2"><path d="M2 17h4c2 0 3-5 6-5s4 5 6 5h4"/></svg>
+          <span>Speedbreaker</span>
+        </button>
+        <button type="button" class="hazard-opt" data-hazard="Pothole">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2"><ellipse cx="12" cy="15" rx="8" ry="4"/><path d="M12 3v7"/></svg>
+          <span>Pothole</span>
+        </button>
+        <button type="button" class="hazard-opt" data-hazard="Traffic Camera">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.2"><rect x="3" y="7" width="14" height="10" rx="2"/><path d="m17 10 4-2v8l-4-2"/></svg>
+          <span>Camera</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+
+    // --- 1. OFFICIAL INDIA POST 4x4 SPIRAL 10-CHAR DIGIPIN ---
+    const DIGIPIN_GRID = [
+      ["F", "C", "9", "8"],
+      ["J", "3", "2", "7"],
+      ["K", "4", "5", "6"],
+      ["L", "M", "P", "T"]
+    ];
+
+    function encodeDigiPin(lat, lon) {
+      let minLat = 2.5, maxLat = 38.5, minLon = 63.5, maxLon = 99.5;
+      const clat = Math.min(maxLat - 1e-6, Math.max(minLat, lat));
+      const clon = Math.min(maxLon - 1e-6, Math.max(minLon, lon));
+      let code = "";
+      for (let level = 1; level <= 10; level++) {
+        const latDiv = (maxLat - minLat) / 4;
+        const lonDiv = (maxLon - minLon) / 4;
+        const row = Math.min(3, Math.max(0, 3 - Math.floor((clat - minLat) / latDiv)));
+        const col = Math.min(3, Math.max(0, Math.floor((clon - minLon) / lonDiv)));
+        code += DIGIPIN_GRID[row][col];
+        if (level === 3 || level === 6) code += "-";
+        maxLat = maxLat - row * latDiv;
+        minLat = maxLat - latDiv;
+        minLon = minLon + col * lonDiv;
+        maxLon = minLon + lonDiv;
+      }
+      return code;
+    }
+
+    function decodeDigiPin(pin) {
+      const clean = pin.toUpperCase().replace(/[^2-9CFJKLMP T]/g, "").replace(/\s/g, "");
+      if (clean.length !== 10) return null;
+      let minLat = 2.5, maxLat = 38.5, minLon = 63.5, maxLon = 99.5;
+      for (let i = 0; i < 10; i++) {
+        const ch = clean[i];
+        let row = -1, col = -1;
+        for (let r = 0; r < 4; r++) {
+          const c = DIGIPIN_GRID[r].indexOf(ch);
+          if (c !== -1) { row = r; col = c; break; }
+        }
+        if (row === -1) return null;
+        const latDiv = (maxLat - minLat) / 4;
+        const lonDiv = (maxLon - minLon) / 4;
+        maxLat = maxLat - row * latDiv;
+        minLat = maxLat - latDiv;
+        minLon = minLon + col * lonDiv;
+        maxLon = minLon + lonDiv;
+      }
+      return { lat: (minLat + maxLat) / 2, lon: (minLon + maxLon) / 2 };
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = "none"; }, 2800);
+    }
+
+    function weatherLabel(code) {
+      if (code === 0) return "Clear";
+      if (code <= 3) return "Partly Cloudy";
+      if (code <= 48) return "Haze / Fog";
+      if (code <= 67) return "Rain";
+      if (code <= 82) return "Showers";
+      return "Storm";
+    }
+
+    // --- 2. APP STATE & MAP STYLES ---
+    let userCoords = [79.9109, 27.8815]; // Azizganj, Shahjahanpur, UP
+    let originObj = { lng: userCoords[0], lat: userCoords[1], name: "Your current location" };
+    let destObj = null;
+    let isSwapped = false;
+    let activeMode = "car";
+    let computedRoutes = [];
+    let selectedRouteIdx = 0;
+    let activeRouteGeoJson = null;
+
+    let currentStyleKey = "liberty";
+    let isNightMode = false;
+    const detailsState = {
+      transit: false,
+      traffic: false,
+      bicycling: false,
+      buildings3d: true,
+      streetview: false,
+      wildfires: false,
+      aqi: false
+    };
+
+    let isRulerOn = false;
+    let rulerPoints = [];
+    let rulerMarkers = [];
+    let simInterval = null;
+    let gpsWatchId = null;
+    let voiceMode = "en";
+    let poiMarkers = [];
+    let hazardMarkers = [];
+    let aqiMarkers = [];
+    let wildfireMarkers = [];
+    let isNavigating = false;
+    let lastExploreCenterKey = "";
+
+    const STYLES = {
+      liberty: "https://tiles.openfreemap.org/styles/liberty",
+      dark: "https://tiles.openfreemap.org/styles/dark",
+      terrain: "https://tiles.openfreemap.org/styles/bright",
+      satellite: {
+        version: 8,
+        glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+        sources: {
+          sat: {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+            maxzoom: 17
+          },
+          openmaptiles: {
+            type: "vector",
+            url: "https://tiles.openfreemap.org/planet"
+          }
+        },
+        layers: [
+          { id: "sat-layer", type: "raster", source: "sat" },
+          {
+            id: "sat-roads-casing",
+            type: "line",
+            source: "openmaptiles",
+            "source-layer": "transportation",
+            paint: { "line-color": "rgba(15, 23, 42, 0.55)", "line-width": 2.4 }
+          },
+          {
+            id: "sat-roads-line",
+            type: "line",
+            source: "openmaptiles",
+            "source-layer": "transportation",
+            paint: { "line-color": "rgba(255, 255, 255, 0.52)", "line-width": 1.3 }
+          },
+          {
+            id: "sat-road-labels",
+            type: "symbol",
+            source: "openmaptiles",
+            "source-layer": "transportation_name",
+            minzoom: 12.5,
+            layout: {
+              "symbol-placement": "line",
+              "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+              "text-font": ["Noto Sans Regular"],
+              "text-size": 11
+            },
+            paint: { "text-color": "#ffffff", "text-halo-color": "#0f172a", "text-halo-width": 1.6 }
+          },
+          {
+            id: "sat-water-labels",
+            type: "symbol",
+            source: "openmaptiles",
+            "source-layer": "water_name",
+            layout: {
+              "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+              "text-font": ["Noto Sans Italic"],
+              "text-size": 12
+            },
+            paint: { "text-color": "#bae6fd", "text-halo-color": "#0f172a", "text-halo-width": 1.5 }
+          },
+          {
+            id: "sat-place-labels",
+            type: "symbol",
+            source: "openmaptiles",
+            "source-layer": "place",
+            layout: {
+              "text-field": [
+                "case",
+                ["all", ["has", "name:en"], ["has", "name:hi"]],
+                ["concat", ["get", "name:en"], "\n", ["get", "name:hi"]],
+                ["coalesce", ["get", "name:en"], ["get", "name"]]
+              ],
+              "text-font": ["Noto Sans Bold"],
+              "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11.5, 14, 14]
+            },
+            paint: { "text-color": "#ffffff", "text-halo-color": "#0f172a", "text-halo-width": 1.8 }
+          },
+          {
+            id: "sat-poi-labels",
+            type: "symbol",
+            source: "openmaptiles",
+            "source-layer": "poi",
+            minzoom: 13.5,
+            layout: {
+              "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+              "text-font": ["Noto Sans Regular"],
+              "text-size": 11.5
+            },
+            paint: { "text-color": "#fef08a", "text-halo-color": "#0f172a", "text-halo-width": 1.6 }
+          }
+        ]
+      }
+    };
+
+    // --- 3. SAFE MAPLIBRE INSTANCE ---
+    const map = new maplibregl.Map({
+      container: "map",
+      style: STYLES.liberty,
+      center: userCoords,
+      zoom: 15.2,
+      minZoom: 3,
+      maxZoom: 18.2,
+      pitch: 48,
+      maxPitch: 55,
+      bearing: -10,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+      antialias: false,
+      preserveDrawingBuffer: true
+    });
+
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 90, unit: "metric" }), "bottom-right");
+
+    map.getCanvas().addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      detailsState.buildings3d = false;
+      syncDetailCardStates();
+      showToast("GPU context reset — switched to safe 2D");
+    }, false);
+    map.getCanvas().addEventListener("webglcontextrestored", () => reattachCustomLayers(), false);
+
+    const userDot = document.createElement("div");
+    userDot.style.cssText = "width:18px;height:18px;border-radius:50%;background:#1d4ed8;border:3px solid #ffffff;box-shadow:0 0 0 7px rgba(29,78,216,0.28);";
+    const userMarker = new maplibregl.Marker({ element: userDot }).setLngLat(userCoords).addTo(map);
+    const destMarker = new maplibregl.Marker({ color: "#047857" });
+
+    function buildLocal3dBlocksGeoJson(centerLng, centerLat) {
+      const offsets = [
+        [-0.0011, 0.0008, 0.00030, 0.00022, 18],
+        [-0.0005, 0.0010, 0.00026, 0.00020, 24],
+        [0.0007, 0.0007, 0.00032, 0.00024, 20],
+        [-0.0012, -0.0006, 0.00028, 0.00021, 16],
+        [0.0008, -0.0008, 0.00030, 0.00022, 22]
+      ];
+      return {
+        type: "FeatureCollection",
+        features: offsets.map(([dx, dy, w, h, elev], i) => ({
+          type: "Feature",
+          id: i,
+          properties: { height: elev, base: 0 },
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [centerLng + dx, centerLat + dy],
+              [centerLng + dx + w, centerLat + dy],
+              [centerLng + dx + w, centerLat + dy + h],
+              [centerLng + dx, centerLat + dy + h],
+              [centerLng + dx, centerLat + dy]
+            ]]
+          }
+        }))
+      };
+    }
+
+    function getFirstTextSymbolLayerId() {
+      const style = map.getStyle();
+      if (!style || !Array.isArray(style.layers)) return undefined;
+      for (const layer of style.layers) {
+        if (layer.type === "symbol" && layer.layout && layer.layout["text-field"]) {
+          return layer.id;
+        }
+      }
+      return undefined;
+    }
+
+    function reattachCustomLayers() {
+      const style = map.getStyle();
+      const firstLabelId = getFirstTextSymbolLayerId();
+      const isDark = isNightMode;
+
+      // 3D Terrain DEM + Hillshade when Terrain map type is active
+      if (currentStyleKey === "terrain" && !isNightMode) {
+        try {
+          if (!map.getSource("bp-dem")) {
+            map.addSource("bp-dem", {
+              type: "raster-dem",
+              tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+              encoding: "terrarium",
+              tileSize: 256,
+              maxzoom: 14
+            });
+          }
+          if (!map.getLayer("bp-hillshade")) {
+            map.addLayer(
+              {
+                id: "bp-hillshade",
+                type: "hillshade",
+                source: "bp-dem",
+                paint: { "hillshade-exaggeration": 0.65, "hillshade-shadow-color": "#475569" }
+              },
+              firstLabelId
+            );
+          }
+          map.setTerrain({ source: "bp-dem", exaggeration: 1.4 });
+        } catch (_) {}
+      } else {
+        try { map.setTerrain(null); } catch (_) {}
+      }
+
+      if (style && style.sources && style.sources.openmaptiles) {
+        // 1. Raised 3D Buildings
+        ["building-3d", "bharatpin-3d-buildings"].forEach((id) => {
+          if (map.getLayer(id)) { try { map.removeLayer(id); } catch (_) {} }
+        });
+        map.addLayer(
+          {
+            id: "bharatpin-3d-buildings",
+            type: "fill-extrusion",
+            source: "openmaptiles",
+            "source-layer": "building",
+            minzoom: 13,
+            maxzoom: 24,
+            filter: ["!", ["to-boolean", ["get", "hide_3d"]]],
+            layout: { visibility: detailsState.buildings3d ? "visible" : "none" },
+            paint: {
+              "fill-extrusion-color": isDark
+                ? ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], ["get", "height"], 14], 0, "#1e293b", 25, "#334155", 60, "#475569"]
+                : ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], ["get", "height"], 14], 0, "#cbd5e1", 25, "#94a3b8", 60, "#64748b"],
+              "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, ["coalesce", ["get", "render_height"], ["get", "height"], 14]],
+              "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
+              "fill-extrusion-vertical-gradient": true,
+              "fill-extrusion-opacity": 0.9
+            }
+          },
+          firstLabelId
+        );
+
+        map.setLight({
+          anchor: "viewport",
+          color: isDark ? "#cbd5e1" : "#f1f5f9",
+          intensity: 0.35,
+          position: [1.5, 210, 40]
+        });
+
+        // 2. Traffic Overlay
+        if (!map.getLayer("bharatpin-traffic-overlay")) {
+          map.addLayer(
+            {
+              id: "bharatpin-traffic-overlay",
+              type: "line",
+              source: "openmaptiles",
+              "source-layer": "transportation",
+              filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+              layout: { visibility: detailsState.traffic ? "visible" : "none", "line-cap": "round", "line-join": "round" },
+              paint: {
+                "line-color": ["match", ["get", "class"], "motorway", "#10b981", "trunk", "#f59e0b", "primary", "#ef4444", "#10b981"],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.8, 15, 5],
+                "line-opacity": 0.85
+              }
+            },
+            firstLabelId
+          );
+        }
+
+        // 3. Public Transit Overlay
+        if (!map.getLayer("bharatpin-transit-overlay")) {
+          map.addLayer(
+            {
+              id: "bharatpin-transit-overlay",
+              type: "line",
+              source: "openmaptiles",
+              "source-layer": "transportation",
+              filter: ["in", ["get", "class"], ["literal", ["rail", "transit"]]],
+              layout: { visibility: detailsState.transit ? "visible" : "none", "line-cap": "round" },
+              paint: { "line-color": "#7c3aed", "line-width": ["interpolate", ["linear"], ["zoom"], 6, 2, 15, 4.5], "line-dasharray": [2, 1.2] }
+            },
+            firstLabelId
+          );
+        }
+
+        // 4. Bicycling Overlay
+        if (!map.getLayer("bharatpin-bike-overlay")) {
+          map.addLayer(
+            {
+              id: "bharatpin-bike-overlay",
+              type: "line",
+              source: "openmaptiles",
+              "source-layer": "transportation",
+              filter: ["in", ["get", "class"], ["literal", ["path", "track", "minor", "tertiary"]]],
+              layout: { visibility: detailsState.bicycling ? "visible" : "none", "line-cap": "round" },
+              paint: { "line-color": "#16a34a", "line-width": 3, "line-opacity": 0.8 }
+            },
+            firstLabelId
+          );
+        }
+
+        // 5. Street View Coverage Overlay
+        if (!map.getLayer("bharatpin-sv-overlay")) {
+          map.addLayer(
+            {
+              id: "bharatpin-sv-overlay",
+              type: "line",
+              source: "openmaptiles",
+              "source-layer": "transportation",
+              filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary"]]],
+              layout: { visibility: detailsState.streetview ? "visible" : "none", "line-cap": "round" },
+              paint: { "line-color": "#0284c7", "line-width": 4, "line-opacity": 0.72 }
+            },
+            firstLabelId
+          );
+        }
+
+        style.layers.forEach((lyr) => {
+          if (lyr.type === "symbol" && lyr.layout && lyr.layout["text-field"]) {
+            try { map.setLayerZoomRange(lyr.id, lyr.minzoom || 0, 24); } catch (_) {}
+          }
+        });
+      }
+
+      // Synthetic 3D depth blocks (ensures clear 3D visual feedback even where OSM lacks building heights)
+      const c = map.getCenter();
+      if (!map.getSource("bp-3d-blocks-src")) {
+        map.addSource("bp-3d-blocks-src", { type: "geojson", data: buildLocal3dBlocksGeoJson(c.lng, c.lat) });
+      }
+      if (!map.getLayer("bp-3d-blocks-layer")) {
+        map.addLayer(
+          {
+            id: "bp-3d-blocks-layer",
+            type: "fill-extrusion",
+            source: "bp-3d-blocks-src",
+            minzoom: 14.2,
+            layout: { visibility: detailsState.buildings3d ? "visible" : "none" },
+            paint: {
+              "fill-extrusion-color": "#0d9488",
+              "fill-extrusion-height": ["get", "height"],
+              "fill-extrusion-base": ["get", "base"],
+              "fill-extrusion-opacity": 0.65,
+              "fill-extrusion-vertical-gradient": true
+            }
+          },
+          firstLabelId
+        );
+      }
+
+      // Route & Ruler Layers
+      if (!map.getSource("route-src")) {
+        map.addSource("route-src", { type: "geojson", data: activeRouteGeoJson || { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "route-casing", type: "line", source: "route-src", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#1e3a8a", "line-width": 9 } }, firstLabelId);
+        map.addLayer({ id: "route-fill", type: "line", source: "route-src", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": detailsState.traffic ? "#f59e0b" : "#3b82f6", "line-width": 5.5 } }, firstLabelId);
+      }
+      if (!map.getSource("ruler-src")) {
+        map.addSource("ruler-src", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: rulerPoints } } });
+        map.addLayer({ id: "ruler-line", type: "line", source: "ruler-src", paint: { "line-color": "#0f172a", "line-width": 3, "line-dasharray": [2, 2] } });
+      }
+    }
+
+    map.on("style.load", reattachCustomLayers);
+    map.on("rotate", () => {
+      document.getElementById("compassNeedle").style.transform = `rotate(${-map.getBearing()}deg)`;
+    });
+
+    map.on("moveend", () => {
+      const c = map.getCenter();
+      if (map.getSource("bp-3d-blocks-src")) {
+        map.getSource("bp-3d-blocks-src").setData(buildLocal3dBlocksGeoJson(c.lng, c.lat));
+      }
+      if (map.getZoom() < 8.5) {
+        document.getElementById("dockAreaTitle").textContent = "Local vibe";
+      } else {
+        const key = `${c.lat.toFixed(2)},${c.lng.toFixed(2)}`;
+        if (key !== lastExploreCenterKey) {
+          lastExploreCenterKey = key;
+          updateDockAreaAndTelemetry(c.lat, c.lng);
+        }
+      }
+    });
+
+    map.on("load", () => {
+      reattachCustomLayers();
+      renderSavedHazards();
+      updateDockAreaAndTelemetry(userCoords[1], userCoords[0]);
+      hydrateStreetViewThumb(userCoords[1], userCoords[0], "Shahjahanpur");
+
+      const params = new URLSearchParams(window.location.search);
+      const sharedPin = params.get("pin");
+      if (sharedPin) {
+        const decoded = decodeDigiPin(sharedPin);
+        if (decoded) openPlaceDetails(decoded.lon, decoded.lat, `DIGIPIN ${sharedPin.toUpperCase()}`, "Shared BharatPin Location");
+      }
+    });
+
+    // --- 4. MAP TYPE & MAP DETAILS SHEET CONTROLS ---
+    const layersBackdrop = document.getElementById("layersSheetBackdrop");
+    document.getElementById("layerToggleBtn").addEventListener("click", () => {
+      layersBackdrop.style.display = "flex";
+    });
+    document.getElementById("closeLayersSheetBtn").addEventListener("click", () => {
+      layersBackdrop.style.display = "none";
+    });
+    layersBackdrop.addEventListener("click", (e) => {
+      if (e.target === layersBackdrop) layersBackdrop.style.display = "none";
+    });
+
+    function applySelectedMapStyle() {
+      const targetStyle = isNightMode ? STYLES.dark : STYLES[currentStyleKey];
+      map.setStyle(targetStyle);
+    }
+
+    document.querySelectorAll(".map-type-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        isNightMode = false;
+        document.getElementById("nightModeToggleBtn").style.background = "";
+        document.getElementById("nightModeToggleBtn").style.color = "";
+        document.querySelectorAll(".map-type-card").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        currentStyleKey = card.dataset.style;
+        applySelectedMapStyle();
+        showToast(`Map type: ${card.textContent.trim()}`);
+      });
+    });
+
+    document.getElementById("nightModeToggleBtn").addEventListener("click", () => {
+      isNightMode = !isNightMode;
+      const btn = document.getElementById("nightModeToggleBtn");
+      btn.style.background = isNightMode ? "#0f172a" : "";
+      btn.style.color = isNightMode ? "#ffffff" : "";
+      applySelectedMapStyle();
+      showToast(isNightMode ? "Night Mode ON" : "Daylight Mode ON");
+    });
+
+    function syncDetailCardStates() {
+      document.querySelectorAll(".map-detail-card").forEach((card) => {
+        card.classList.toggle("active", !!detailsState[card.dataset.detail]);
+      });
+    }
+
+    async function toggleAqiOverlay(on) {
+      aqiMarkers.forEach((m) => m.remove());
+      aqiMarkers = [];
+      if (!on) return;
+      showToast("Loading live Air Quality bubbles...");
+      const pts = [
+        { name: "Local", lat: map.getCenter().lat, lon: map.getCenter().lng },
+        { name: "Delhi", lat: 28.61, lon: 77.21 },
+        { name: "Lucknow", lat: 26.85, lon: 80.95 },
+        { name: "Jaipur", lat: 26.91, lon: 75.79 },
+        { name: "Mumbai", lat: 19.07, lon: 72.88 }
+      ];
+      for (const p of pts) {
+        try {
+          const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${p.lat}&longitude=${p.lon}&current=us_aqi`);
+          const d = await r.json();
+          const val = d?.current?.us_aqi != null ? Math.round(d.current.us_aqi) : 95;
+          const bg = val <= 50 ? "#16a34a" : val <= 100 ? "#ca8a04" : val <= 150 ? "#ea580c" : "#dc2626";
+          const el = document.createElement("div");
+          el.style.cssText = `background:${bg};color:#fff;font-weight:800;font-size:11px;padding:4px 8px;border-radius:999px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.25);`;
+          el.textContent = `AQI ${val}`;
+          aqiMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(map));
+        } catch (_) {}
+      }
+    }
+
+    function toggleWildfireOverlay(on) {
+      wildfireMarkers.forEach((m) => m.remove());
+      wildfireMarkers = [];
+      if (!on) return;
+      const hotspots = [
+        { name: "Uttarakhand Forest Watch", lat: 29.58, lon: 79.12 },
+        { name: "Satpura Dry Heat Watch", lat: 22.48, lon: 78.42 },
+        { name: "Similipal Thermal Watch", lat: 21.85, lon: 86.35 }
+      ];
+      hotspots.forEach((h) => {
+        const el = document.createElement("div");
+        el.style.cssText = "width:28px;height:28px;border-radius:50%;background:#dc2626;border:2px solid #fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(220,38,38,0.45);cursor:pointer;";
+        el.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2c3 4 6 7 6 11a6 6 0 1 1-12 0c0-4 3-7 6-11z"/></svg>';
+        el.onclick = (ev) => { ev.stopPropagation(); showToast(h.name); };
+        wildfireMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([h.lon, h.lat]).addTo(map));
+      });
+      showToast("Thermal & Wildfire watch pins active");
+    }
+
+    document.querySelectorAll(".map-detail-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const key = card.dataset.detail;
+        detailsState[key] = !detailsState[key];
+        syncDetailCardStates();
+
+        if (key === "buildings3d") {
+          ["bharatpin-3d-buildings", "bp-3d-blocks-layer"].forEach((id) => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", detailsState.buildings3d ? "visible" : "none");
+          });
+          map.easeTo({ pitch: detailsState.buildings3d ? 50 : 0, bearing: detailsState.buildings3d ? -16 : 0, zoom: detailsState.buildings3d ? Math.max(map.getZoom(), 15.5) : map.getZoom(), duration: 450 });
+          showToast(detailsState.buildings3d ? "Raised 3D buildings ON" : "2D flat view");
+        } else if (key === "traffic") {
+          if (map.getLayer("bharatpin-traffic-overlay")) map.setLayoutProperty("bharatpin-traffic-overlay", "visibility", detailsState.traffic ? "visible" : "none");
+          if (map.getLayer("route-fill")) map.setPaintProperty("route-fill", "line-color", detailsState.traffic ? "#f59e0b" : "#3b82f6");
+          showToast(detailsState.traffic ? "Traffic layer ON" : "Traffic layer OFF");
+        } else if (key === "transit") {
+          if (map.getLayer("bharatpin-transit-overlay")) map.setLayoutProperty("bharatpin-transit-overlay", "visibility", detailsState.transit ? "visible" : "none");
+          showToast(detailsState.transit ? "Public transit rails ON" : "Public transit OFF");
+        } else if (key === "bicycling") {
+          if (map.getLayer("bharatpin-bike-overlay")) map.setLayoutProperty("bharatpin-bike-overlay", "visibility", detailsState.bicycling ? "visible" : "none");
+          showToast(detailsState.bicycling ? "Bicycling paths ON" : "Bicycling OFF");
+        } else if (key === "streetview") {
+          if (map.getLayer("bharatpin-sv-overlay")) map.setLayoutProperty("bharatpin-sv-overlay", "visibility", detailsState.streetview ? "visible" : "none");
+          showToast(detailsState.streetview ? "Street View corridors highlighted" : "Street View overlay OFF");
+        } else if (key === "aqi") {
+          toggleAqiOverlay(detailsState.aqi);
+        } else if (key === "wildfires") {
+          toggleWildfireOverlay(detailsState.wildfires);
+        }
+      });
+    });
+
+    // --- 5. COMPASS, GPS, VOICE SEARCH, STREET VIEW THUMBNAIL & RULER ---
+    document.getElementById("compassBtn").addEventListener("click", () => {
+      map.easeTo({ bearing: 0, pitch: detailsState.buildings3d ? 48 : 0, duration: 400 });
+      showToast("Snapped North");
+    });
+
+    async function fallbackToIpLocation(reason) {
+      showToast(`${reason} — using network location`);
+      try {
+        const r = await fetch("https://ipwho.is/");
+        const d = await r.json();
+        if (d && d.success) {
+          userCoords = [d.longitude, d.latitude];
+          if (!isSwapped) originObj = { lng: userCoords[0], lat: userCoords[1], name: `${d.city || "Network"} Location` };
+          userMarker.setLngLat(userCoords);
+          map.flyTo({ center: userCoords, zoom: 15.2, pitch: detailsState.buildings3d ? 48 : 0 });
+          updateDockAreaAndTelemetry(d.latitude, d.longitude);
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById("gpsCenterBtn").addEventListener("click", () => {
+      if (!navigator.geolocation) { fallbackToIpLocation("Geolocation unsupported"); return; }
+      showToast("Requesting device GPS...");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userCoords = [pos.coords.longitude, pos.coords.latitude];
+          if (!isSwapped) originObj = { lng: userCoords[0], lat: userCoords[1], name: "Your current location" };
+          userMarker.setLngLat(userCoords);
+          map.flyTo({ center: userCoords, zoom: 16.2, pitch: detailsState.buildings3d ? 50 : 0 });
+          updateDockAreaAndTelemetry(pos.coords.latitude, pos.coords.longitude);
+          showToast(`GPS locked (${pos.coords.latitude.toFixed(4)}°N, ${pos.coords.longitude.toFixed(4)}°E)`);
+        },
+        (err) => {
+          if (err && err.code === 1) fallbackToIpLocation("Allow Location in Brave Site Settings");
+          else fallbackToIpLocation("GPS signal timed out");
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    });
+
+    // Voice Search via Web Speech API
+    document.getElementById("voiceSearchBtn").addEventListener("click", () => {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { showToast("Voice search not supported in this browser"); return; }
+      const btn = document.getElementById("voiceSearchBtn");
+      const rec = new SR();
+      rec.lang = "en-IN";
+      btn.classList.add("listening");
+      showToast("Listening... speak a place or PIN code");
+      rec.onresult = (e) => {
+        btn.classList.remove("listening");
+        const spoken = e.results[0][0].transcript;
+        searchInput.value = spoken;
+        searchInput.dispatchEvent(new Event("input"));
+      };
+      rec.onerror = () => { btn.classList.remove("listening"); showToast("Voice input cancelled"); };
+      rec.onend = () => btn.classList.remove("listening");
+      rec.start();
+    });
+
+    // Street View Thumbnail & Modal
+    let currentSvData = { title: "Local Street Preview", img: "", sub: "India street & landmark preview" };
+    async function hydrateStreetViewThumb(lat, lon, label) {
+      const fallback = makeFallbackPhotoDataUrl(label || "Street View", `${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`, "#0284c7", "#0f172a");
+      currentSvData = { title: `${label || "Area"} • Street View`, img: fallback, sub: `${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E` };
+      document.getElementById("svThumbImg").src = fallback;
+      try {
+        const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent((label || "India") + " road street")}&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=400&format=json&origin=*`);
+        const j = await r.json();
+        const pages = j?.query?.pages ? Object.values(j.query.pages) : [];
+        const url = pages[0]?.imageinfo?.[0]?.thumburl || pages[0]?.imageinfo?.[0]?.url;
+        if (url) {
+          currentSvData.img = url;
+          document.getElementById("svThumbImg").src = url;
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById("streetViewThumb").addEventListener("click", () => {
+      document.getElementById("svModalTitle").textContent = currentSvData.title;
+      document.getElementById("svModalImg").src = currentSvData.img;
+      document.getElementById("svModalSub").textContent = currentSvData.sub;
+      document.getElementById("streetViewModal").style.display = "flex";
+    });
+    document.getElementById("closeSvModalBtn").addEventListener("click", () => {
+      document.getElementById("streetViewModal").style.display = "none";
+    });
+
+    // Distance Ruler
+    function haversineMeters(c1, c2) {
+      const R = 6371000;
+      const toRad = (d) => (d * Math.PI) / 180;
+      const dLat = toRad(c2[1] - c1[1]), dLon = toRad(c2[0] - c1[0]);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(c1[1])) * Math.cos(toRad(c2[1])) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+    function updateRulerOverlay() {
+      if (map.getSource("ruler-src")) {
+        map.getSource("ruler-src").setData({ type: "Feature", geometry: { type: "LineString", coordinates: rulerPoints } });
+      }
+      let totalM = 0;
+      for (let i = 1; i < rulerPoints.length; i++) totalM += haversineMeters(rulerPoints[i - 1], rulerPoints[i]);
+      const str = totalM >= 1000 ? `${(totalM / 1000).toFixed(2)} km` : `${Math.round(totalM)} m`;
+      document.getElementById("rulerDistText").textContent = rulerPoints.length < 2 ? "Tap map points to measure: 0 m" : `Distance (${rulerPoints.length} pts): ${str}`;
+    }
+    function clearRuler() {
+      rulerPoints = [];
+      rulerMarkers.forEach((m) => m.remove());
+      rulerMarkers = [];
+      updateRulerOverlay();
+    }
+    document.getElementById("rulerToggleBtn").addEventListener("click", () => {
+      isRulerOn = !isRulerOn;
+      document.getElementById("rulerToggleBtn").classList.toggle("active", isRulerOn);
+      document.getElementById("rulerBanner").style.display = isRulerOn ? "flex" : "none";
+      if (!isRulerOn) clearRuler();
+      else showToast("Ruler ON — tap points on map");
+    });
+    document.getElementById("clearRulerBtn").addEventListener("click", clearRuler);
+    document.getElementById("closeRulerBtn").addEventListener("click", () => {
+      isRulerOn = false;
+      document.getElementById("rulerToggleBtn").classList.remove("active");
+      document.getElementById("rulerBanner").style.display = "none";
+      clearRuler();
+    });
+
+    // --- 6. EXPANDABLE EXPLORE DOCK (LOCAL PICKS + SIGNATURE SIGHTS + YOU) ---
+    const exploreDock = document.getElementById("exploreDock");
+    function setMapFabsVisible(show) {
+      const disp = show ? "" : "none";
+      document.getElementById("bottomRightFabs").style.display = disp;
+      document.getElementById("streetViewThumb").style.display = disp;
+    }
+
+    document.getElementById("dockDragToggle").addEventListener("click", () => {
+      const expanding = !exploreDock.classList.contains("expanded");
+      exploreDock.classList.toggle("expanded", expanding);
+      setMapFabsVisible(!expanding);
+      if (expanding) {
+        document.getElementById("explorePicksSection").style.display = "block";
+        document.getElementById("dockSavedBody").style.display = "none";
+        hydrateExploreFeed(map.getCenter().lat, map.getCenter().lng);
+      }
+    });
+
+    async function updateDockAreaAndTelemetry(lat, lon) {
+      try {
+        const [wR, aR] = await Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`),
+          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`)
+        ]);
+        const wD = await wR.json();
+        const aD = await aR.json();
+        if (wD?.current) document.getElementById("dockTempVal").textContent = `${Math.round(wD.current.temperature_2m)}°`;
+        if (aD?.current?.us_aqi != null) document.getElementById("dockAqiVal").textContent = `${Math.round(aD.current.us_aqi)} NAQI`;
+      } catch (_) {}
+
+      try {
+        const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=13`);
+        const rd = await rev.json();
+        const a = rd?.address || {};
+        const area = a.suburb || a.neighbourhood || a.town || a.city || a.county || "India";
+        document.getElementById("dockAreaTitle").textContent = area;
+      } catch (_) {}
+    }
+
+    async function hydrateExploreFeed(lat, lon) {
+      const picksRow = document.getElementById("localPicksRow");
+      const sightsRow = document.getElementById("signatureSightsRow");
+      picksRow.innerHTML = `<div style="padding:12px;font-size:0.78rem;color:#64748b;">Discovering local picks...</div>`;
+      sightsRow.innerHTML = `<div style="padding:12px;font-size:0.78rem;color:#64748b;">Loading signature sights...</div>`;
+
+      try {
+        const pRes = await fetch(`https://photon.komoot.io/api/?q=restaurant&lat=${lat}&lon=${lon}&limit=6`);
+        const pData = await pRes.json();
+        const feats = (pData.features || []).slice(0, 5);
+        picksRow.innerHTML = "";
+        if (!feats.length) {
+          picksRow.innerHTML = `<div style="padding:10px;font-size:0.78rem;color:#64748b;">Pan to a city center to see local picks.</div>`;
+        } else {
+          feats.forEach((f, idx) => {
+            const [flng, flat] = f.geometry.coordinates;
+            const p = f.properties || {};
+            const title = p.name || "Local Dining Spot";
+            const addr = [p.street, p.city].filter(Boolean).join(", ") || "Nearby";
+            const imgUrl = makeFallbackPhotoDataUrl(title, addr, idx % 2 ? "#b45309" : "#047857", "#1e293b");
+            const card = document.createElement("div");
+            card.className = "pick-card";
+            card.innerHTML = `
+              <div class="pick-img-wrap">
+                <img src="${imgUrl}" alt="${title}" />
+                <span class="pick-tag">Local pick</span>
+                <div class="pick-quote">"Popular nearby spot in ${p.city || "the area"}"</div>
+              </div>
+              <div class="pick-meta">
+                <div style="font-weight:800;font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                <div style="font-size:0.73rem;color:#475569;margin-top:2px;">4.${(idx % 5) + 1} ★ · ₹300–600 · Dining</div>
+                <div style="font-size:0.72rem;color:#047857;font-weight:700;margin-top:2px;">Open · Tap for DIGIPIN & Route</div>
+              </div>
+            `;
+            card.onclick = () => {
+              exploreDock.classList.remove("expanded");
+              openPlaceDetails(flng, flat, title, addr);
+            };
+            picksRow.appendChild(card);
+          });
+        }
+      } catch (_) {}
+
+      try {
+        const wRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=10000&gslimit=5&format=json&origin=*`);
+        const wJson = await wRes.json();
+        const items = wJson?.query?.geosearch || [];
+        sightsRow.innerHTML = "";
+        if (!items.length) {
+          sightsRow.innerHTML = `<div style="padding:10px;font-size:0.78rem;color:#64748b;">Zoom out or search a city like Lucknow for landmarks.</div>`;
+        } else {
+          items.forEach((it) => {
+            const card = document.createElement("div");
+            card.className = "sight-card";
+            const thumb = makeFallbackPhotoDataUrl(it.title, `${Math.round(it.dist)}m away`, "#0f766e", "#0f172a");
+            card.innerHTML = `
+              <img src="${thumb}" alt="${it.title}" />
+              <div style="padding:7px 9px;">
+                <div style="font-weight:800;font-size:0.77rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.title}</div>
+                <div style="font-size:0.68rem;color:#64748b;">${(it.dist / 1000).toFixed(1)} km away</div>
+              </div>
+            `;
+            card.onclick = () => {
+              exploreDock.classList.remove("expanded");
+              openPlaceDetails(it.lon, it.lat, it.title, "Signature Landmark, India");
+            };
+            sightsRow.appendChild(card);
+          });
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById("seeMorePicksBtn").addEventListener("click", () => {
+      exploreDock.classList.remove("expanded");
+      setMapFabsVisible(true);
+      document.querySelector('.cat-chip[data-amenity="restaurant"]').click();
+    });
+
+    document.getElementById("dockExploreBtn").addEventListener("click", () => {
+      document.querySelectorAll(".dock-tab").forEach((t) => t.classList.remove("active"));
+      document.getElementById("dockExploreBtn").classList.add("active");
+      document.getElementById("explorePicksSection").style.display = "block";
+      document.getElementById("dockSavedBody").style.display = "none";
+      exploreDock.classList.remove("expanded");
+      setMapFabsVisible(true);
+    });
+
+    document.getElementById("dockSavedBtn").addEventListener("click", () => {
+      document.querySelectorAll(".dock-tab").forEach((t) => t.classList.remove("active"));
+      document.getElementById("dockSavedBtn").classList.add("active");
+      exploreDock.classList.add("expanded");
+      setMapFabsVisible(false);
+      document.getElementById("explorePicksSection").style.display = "none";
+      const box = document.getElementById("dockSavedBody");
+      box.style.display = "block";
+      const home = JSON.parse(localStorage.getItem("bp_home") || "null");
+      const work = JSON.parse(localStorage.getItem("bp_work") || "null");
+      const rec = JSON.parse(localStorage.getItem("bp_recent") || "[]");
+      box.innerHTML = `
+        <div style="font-weight:800;font-size:0.86rem;margin-bottom:8px;">Your Saved Places</div>
+        <div class="stay-item" id="youHomeRow"><span><strong>Home</strong> — ${home ? home.name : "Not set yet"}</span><span style="color:#047857;font-weight:800;font-size:0.74rem;">OPEN</span></div>
+        <div class="stay-item" id="youWorkRow"><span><strong>Work</strong> — ${work ? work.name : "Not set yet"}</span><span style="color:#047857;font-weight:800;font-size:0.74rem;">OPEN</span></div>
+        <div style="font-weight:800;font-size:0.82rem;margin:10px 0 4px;">Recent Searches</div>
+        ${rec.length ? rec.map((r, i) => `<div class="stay-item rec-jump" data-idx="${i}"><span>${r.name}</span><span style="color:#64748b;font-size:0.72rem;">VIEW</span></div>`).join("") : '<div style="font-size:0.76rem;color:#64748b;">No recent places yet.</div>'}
+      `;
+      document.getElementById("youHomeRow").onclick = () => {
+        if (home) { exploreDock.classList.remove("expanded"); openPlaceDetails(home.lng, home.lat, `Home (${home.name})`, home.addr); }
+        else showToast("Tap a spot on map and tap Save");
+      };
+      document.getElementById("youWorkRow").onclick = () => {
+        if (work) { exploreDock.classList.remove("expanded"); openPlaceDetails(work.lng, work.lat, `Work (${work.name})`, work.addr); }
+        else showToast("Tap a spot on map and tap Set Work");
+      };
+      box.querySelectorAll(".rec-jump").forEach((el) => {
+        el.onclick = () => {
+          const it = rec[Number(el.dataset.idx)];
+          exploreDock.classList.remove("expanded");
+          openPlaceDetails(it.lng, it.lat, it.name, it.addr);
+        };
+      });
+    });
+
+    document.getElementById("dockContributeBtn").addEventListener("click", () => {
+      document.querySelectorAll(".dock-tab").forEach((t) => t.classList.remove("active"));
+      document.getElementById("dockContributeBtn").classList.add("active");
+      document.getElementById("reportModal").style.display = "flex";
+    });
+
+    // --- 7. PLACE CARD, COLLAGE, SUMMARY, WHEN TO VISIT & WHERE TO STAY ---
+    function makeFallbackPhotoDataUrl(label, sub, bg1, bg2) {
+      const c = document.createElement("canvas");
+      c.width = 240; c.height = 170;
+      const ctx = c.getContext("2d");
+      const g = ctx.createLinearGradient(0, 0, 240, 170);
+      g.addColorStop(0, bg1); g.addColorStop(1, bg2);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 240, 170);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(String(label || "BharatPin").slice(0, 20), 14, 128);
+      ctx.fillStyle = "rgba(255,255,255,0.74)";
+      ctx.font = "11px sans-serif";
+      ctx.fillText(String(sub || "India").slice(0, 26), 14, 148);
+      return c.toDataURL("image/png");
+    }
+
+    async function hydratePlaceMediaAndSummary(name, addr) {
+      const cleanName = name.split(",")[0].trim();
+      document.getElementById("photoSlot0").src = makeFallbackPhotoDataUrl(cleanName, addr, "#0f766e", "#1e293b");
+      document.getElementById("photoSlot1").src = makeFallbackPhotoDataUrl("BharatPin", "3D Landmark", "#1d4ed8", "#0f172a");
+      document.getElementById("photoSlot2").src = makeFallbackPhotoDataUrl("India Grid", addr, "#047857", "#064e3b");
+      document.getElementById("placeSummaryText").textContent = `${cleanName} in ${addr}. Tap Directions or Start for turn-by-turn navigation.`;
+
+      try {
+        const wikiSum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`);
+        if (wikiSum.ok) {
+          const sData = await wikiSum.json();
+          if (sData.extract) document.getElementById("placeSummaryText").textContent = sData.extract;
+          if (sData.thumbnail?.source) document.getElementById("photoSlot0").src = sData.thumbnail.source;
+        }
+        const imgApi = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanName + " India")}&gsrlimit=3&prop=imageinfo&iiprop=url&iiurlwidth=360&format=json&origin=*`);
+        const imgJson = await imgApi.json();
+        const pages = imgJson?.query?.pages ? Object.values(imgJson.query.pages) : [];
+        const urls = pages.map((p) => p.imageinfo?.[0]?.thumburl || p.imageinfo?.[0]?.url).filter(Boolean);
+        if (urls[0]) document.getElementById("photoSlot0").src = urls[0];
+        if (urls[1]) document.getElementById("photoSlot1").src = urls[1];
+        if (urls[2]) document.getElementById("photoSlot2").src = urls[2];
+      } catch (_) {}
+    }
+
+    async function fetchDestinationWeatherAndAqi(lat, lon) {
+      document.getElementById("destTempText").textContent = "Syncing...";
+      document.getElementById("destAqiText").textContent = "NAQI --";
+      try {
+        const [wRes, aRes] = await Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`),
+          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`)
+        ]);
+        const wData = await wRes.json();
+        const aData = await aRes.json();
+        if (wData?.current) {
+          document.getElementById("destTempText").textContent = `${Math.round(wData.current.temperature_2m)}°C • ${weatherLabel(wData.current.weather_code)}`;
+        }
+        if (aData?.current?.us_aqi != null) {
+          const aqi = Math.round(aData.current.us_aqi);
+          const tag = aqi <= 50 ? "Good" : aqi <= 100 ? "Moderate" : aqi <= 150 ? "Sensitive" : "Poor";
+          document.getElementById("destAqiText").textContent = `NAQI ${aqi} (${tag})`;
+        }
+      } catch (_) {
+        document.getElementById("destTempText").textContent = "Weather offline";
+      }
+    }
+
+    function openPlaceDetails(lng, lat, name, addr) {
+      destObj = { lng, lat, name, addr };
+      isSwapped = false;
+      originObj = { lng: userCoords[0], lat: userCoords[1], name: "Your current location" };
+
+      destMarker.setLngLat([lng, lat]).addTo(map);
+      map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 15.4), pitch: detailsState.buildings3d ? 50 : 0 });
+
+      const digi = encodeDigiPin(lat, lng);
+      document.getElementById("placeTitle").textContent = name;
+      document.getElementById("placeSub").textContent = addr;
+      document.getElementById("digiPinText").textContent = digi;
+      document.getElementById("bharatUrlText").textContent = `?pin=${digi}`;
+      document.getElementById("whereToStayBody").style.display = "none";
+      document.getElementById("whereToStayBody").dataset.loaded = "";
+
+      exploreDock.classList.remove("expanded");
+      exploreDock.style.display = "none";
+      setMapFabsVisible(false);
+      document.getElementById("placeCard").style.display = "block";
+      document.getElementById("routesSheet").style.display = "none";
+
+      fetchDestinationWeatherAndAqi(lat, lng);
+      hydratePlaceMediaAndSummary(name, addr);
+      hydrateStreetViewThumb(lat, lng, name.split(",")[0]);
+    }
+
+    map.on("click", async (e) => {
+      if (isNavigating) return;
+      const { lng, lat } = e.lngLat;
+      if (isRulerOn) {
+        rulerPoints.push([lng, lat]);
+        const ptEl = document.createElement("div");
+        ptEl.style.cssText = "width:10px;height:10px;border-radius:50%;background:#ffffff;border:3px solid #0f172a;";
+        rulerMarkers.push(new maplibregl.Marker({ element: ptEl }).setLngLat([lng, lat]).addTo(map));
+        updateRulerOverlay();
+        return;
+      }
+      openPlaceDetails(lng, lat, "Pinned Location", `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`);
+        const data = await res.json();
+        if (data?.display_name) {
+          const parts = data.display_name.split(",").map((s) => s.trim());
+          const title = parts.slice(0, 2).join(", ");
+          const addr = parts.slice(2, 5).join(", ") || "India";
+          document.getElementById("placeTitle").textContent = title;
+          document.getElementById("placeSub").textContent = addr;
+          if (destObj) { destObj.name = title; destObj.addr = addr; }
+          hydratePlaceMediaAndSummary(title, addr);
+        }
+      } catch (_) {}
+    });
+
+    document.getElementById("closePlaceCardBtn").addEventListener("click", () => {
+      document.getElementById("placeCard").style.display = "none";
+      exploreDock.style.display = "block";
+      setMapFabsVisible(true);
+      destMarker.remove();
+    });
+
+    document.getElementById("speakPlaceBtn").addEventListener("click", () => {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(document.getElementById("placeTitle").textContent);
+      u.lang = "hi-IN";
+      window.speechSynthesis.speak(u);
+    });
+
+    document.getElementById("whenToVisitToggle").addEventListener("click", () => {
+      const b = document.getElementById("whenToVisitBody");
+      b.style.display = b.style.display === "block" ? "none" : "block";
+    });
+
+    document.getElementById("whereToStayToggle").addEventListener("click", async () => {
+      const b = document.getElementById("whereToStayBody");
+      const open = b.style.display !== "block";
+      b.style.display = open ? "block" : "none";
+      if (open && destObj && !b.dataset.loaded) {
+        b.innerHTML = "Searching nearby hotels...";
+        try {
+          const r = await fetch(`https://photon.komoot.io/api/?q=hotel&lat=${destObj.lat}&lon=${destObj.lng}&limit=4`);
+          const d = await r.json();
+          const feats = (d.features || []).slice(0, 4);
+          if (!feats.length) { b.innerHTML = "No mapped hotels right here — tap Hotels chip on map."; return; }
+          b.innerHTML = "";
+          feats.forEach((f) => {
+            const [hlng, hlat] = f.geometry.coordinates;
+            const nm = f.properties?.name || "Hotel Stay";
+            const row = document.createElement("div");
+            row.className = "stay-item";
+            row.innerHTML = `<span style="font-weight:700;color:#0f172a;">${nm}</span><span style="color:#047857;font-weight:800;font-size:0.72rem;">VIEW</span>`;
+            row.onclick = () => openPlaceDetails(hlng, hlat, nm, f.properties?.city || "India");
+            b.appendChild(row);
+          });
+          b.dataset.loaded = "1";
+        } catch (_) {
+          b.innerHTML = "Could not load stays right now.";
+        }
+      }
+    });
+
+    document.getElementById("saveAsHomeBtn").addEventListener("click", () => {
+      if (!destObj) return;
+      localStorage.setItem("bp_home", JSON.stringify(destObj));
+      showToast("Saved to Home");
+    });
+    document.getElementById("saveAsWorkBtn").addEventListener("click", () => {
+      if (!destObj) return;
+      localStorage.setItem("bp_work", JSON.stringify(destObj));
+      showToast("Saved as Work");
+    });
+    document.getElementById("homeChip").addEventListener("click", () => {
+      const h = JSON.parse(localStorage.getItem("bp_home") || "null");
+      if (!h) { showToast("Tap a spot on the map and tap Save"); return; }
+      openPlaceDetails(h.lng, h.lat, `Home (${h.name})`, h.addr);
+    });
+    document.getElementById("workChip").addEventListener("click", () => {
+      const w = JSON.parse(localStorage.getItem("bp_work") || "null");
+      if (!w) { showToast("Tap a spot on the map and tap Set Work"); return; }
+      openPlaceDetails(w.lng, w.lat, `Work (${w.name})`, w.addr);
+    });
+    document.getElementById("copyDigiPinBtn").addEventListener("click", () => {
+      const code = document.getElementById("digiPinText").textContent;
+      navigator.clipboard?.writeText(code);
+      showToast(`Copied DIGIPIN: ${code}`);
+    });
+    document.getElementById("sharePinBtn").addEventListener("click", () => {
+      const code = document.getElementById("digiPinText").textContent;
+      const url = `${window.location.origin}${window.location.pathname}?pin=${code}`;
+      if (navigator.share) navigator.share({ title: destObj?.name || "BharatPin", text: `BharatPin DIGIPIN: ${code}`, url }).catch(() => {});
+      else { navigator.clipboard?.writeText(url); showToast("Shareable ?pin= URL copied"); }
+    });
+
+    // --- 8. SEARCH (NOMINATIM + OFFICIAL DIGIPIN + RECENT) ---
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    let searchTimer = null;
+
+    function saveRecentSearch(item) {
+      const list = JSON.parse(localStorage.getItem("bp_recent") || "[]").filter((x) => x.name !== item.name);
+      list.unshift(item);
+      localStorage.setItem("bp_recent", JSON.stringify(list.slice(0, 5)));
+    }
+
+    searchInput.addEventListener("focus", () => {
+      if (searchInput.value.trim()) return;
+      const recent = JSON.parse(localStorage.getItem("bp_recent") || "[]");
+      if (!recent.length) return;
+      searchResults.innerHTML = recent.map((r) => `<div class="search-item"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</span><span style="color:#64748b;font-size:0.69rem;font-weight:700;">RECENT</span></div>`).join("");
+      Array.from(searchResults.children).forEach((el, idx) => {
+        el.onclick = () => { searchResults.style.display = "none"; openPlaceDetails(recent[idx].lng, recent[idx].lat, recent[idx].name, recent[idx].addr); };
+      });
+      searchResults.style.display = "block";
+    });
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      clearSearchBtn.style.display = "none";
+      searchResults.style.display = "none";
+    });
+
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.trim();
+      clearSearchBtn.style.display = q ? "grid" : "none";
+      clearTimeout(searchTimer);
+      if (!q) { searchResults.style.display = "none"; return; }
+
+      const decoded = decodeDigiPin(q);
+      if (decoded) {
+        searchResults.innerHTML = `<div class="search-item"><span>Jump to DIGIPIN <strong>${q.toUpperCase()}</strong></span><span style="color:#047857;font-weight:800;font-size:0.72rem;">DIGIPIN</span></div>`;
+        searchResults.style.display = "block";
+        searchResults.firstElementChild.onclick = () => {
+          searchResults.style.display = "none";
+          openPlaceDetails(decoded.lon, decoded.lat, `DIGIPIN ${q.toUpperCase()}`, "Official 4x4 Spiral India Grid");
+        };
+        return;
+      }
+
+      if (q.length < 3) return;
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=5&q=${encodeURIComponent(q)}`);
+          const items = await res.json();
+          searchResults.innerHTML = "";
+          if (!items.length) { searchResults.style.display = "none"; return; }
+          items.forEach((it) => {
+            const div = document.createElement("div");
+            div.className = "search-item";
+            const parts = it.display_name.split(",").map((s) => s.trim());
+            div.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${parts.slice(0, 3).join(", ")}</span><span style="color:#047857;font-weight:800;font-size:0.7rem;">INDIA</span>`;
+            div.onclick = () => {
+              searchResults.style.display = "none";
+              searchInput.value = parts[0];
+              const place = { lng: parseFloat(it.lon), lat: parseFloat(it.lat), name: parts[0], addr: parts.slice(1, 4).join(", ") || "India" };
+              saveRecentSearch(place);
+              openPlaceDetails(place.lng, place.lat, place.name, place.addr);
+            };
+            searchResults.appendChild(div);
+          });
+          searchResults.style.display = "block";
+        } catch (_) {}
+      }, 320);
+    });
+
+    // --- 9. MULTIMODAL ROUTING & ACTIVE NAVIGATION ---
+    function enterRoutingMode() {
+      if (!destObj) { showToast("Tap a place on the map or search a destination first"); return; }
+      document.getElementById("topSearchWrap").style.display = "none";
+      document.getElementById("placeCard").style.display = "none";
+      exploreDock.style.display = "none";
+      setMapFabsVisible(false);
+      document.getElementById("routeHeaderPanel").style.display = "block";
+      document.getElementById("routesSheet").style.display = "block";
+      document.getElementById("originLabel").textContent = originObj.name;
+      document.getElementById("destLabel").textContent = destObj.name;
+      fetchMultimodalRoutes();
+    }
+
+    document.getElementById("openDirectionsBtn").addEventListener("click", enterRoutingMode);
+    document.getElementById("quickRouteBtn").addEventListener("click", enterRoutingMode);
+    document.getElementById("directStartBtn").addEventListener("click", () => {
+      if (!destObj) return;
+      enterRoutingMode();
+      setTimeout(() => { if (computedRoutes.length) document.getElementById("startNavBtn").click(); }, 700);
+    });
+
+    document.getElementById("swapOdBtn").addEventListener("click", () => {
+      if (!destObj) return;
+      const temp = { ...originObj };
+      originObj = { lng: destObj.lng, lat: destObj.lat, name: destObj.name };
+      destObj = { lng: temp.lng, lat: temp.lat, name: temp.name, addr: "Swapped location" };
+      isSwapped = !isSwapped;
+      destMarker.setLngLat([destObj.lng, destObj.lat]);
+      document.getElementById("originLabel").textContent = originObj.name;
+      document.getElementById("destLabel").textContent = destObj.name;
+      fetchMultimodalRoutes();
+    });
+
+    document.getElementById("closeRoutingBtn").addEventListener("click", () => {
+      document.getElementById("routeHeaderPanel").style.display = "none";
+      document.getElementById("routesSheet").style.display = "none";
+      document.getElementById("topSearchWrap").style.display = "block";
+      exploreDock.style.display = "block";
+      setMapFabsVisible(true);
+      activeRouteGeoJson = null;
+      if (map.getSource("route-src")) map.getSource("route-src").setData({ type: "FeatureCollection", features: [] });
+    });
+
+    document.querySelectorAll(".mode-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".mode-tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeMode = tab.dataset.mode;
+        fetchMultimodalRoutes();
+      });
+    });
+
+    document.getElementById("fuelTypeSelect").addEventListener("change", () => renderRouteOptions());
+
+    async function fetchMultimodalRoutes() {
+      if (!destObj) return;
+      const container = document.getElementById("routesListContainer");
+      container.innerHTML = `<div style="padding:12px 0;font-size:0.81rem;color:#64748b;">Calculating routes...</div>`;
+      const profile = activeMode === "walk" ? "foot" : "driving";
+      const url = `https://router.project-osrm.org/route/v1/${profile}/${originObj.lng},${originObj.lat};${destObj.lng},${destObj.lat}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        computedRoutes = data.routes || [];
+        selectedRouteIdx = 0;
+        if (!computedRoutes.length) { container.innerHTML = `<div style="padding:10px 0;color:#dc2626;font-size:0.81rem;">No road route found.</div>`; return; }
+        renderRouteOptions();
+      } catch (_) {
+        container.innerHTML = `<div style="padding:10px 0;color:#dc2626;font-size:0.81rem;">Routing server unreachable.</div>`;
+      }
+    }
+
+    function calcTripCostInr(distKm) {
+      if (activeMode === "walk") return "Zero fuel";
+      if (activeMode === "metro") return `Est. Fare: ₹${Math.max(10, Math.min(70, Math.round(distKm * 2.5)))}`;
+      const fuel = document.getElementById("fuelTypeSelect").value;
+      const perKm = fuel === "ev" ? 1.2 : fuel === "cng" ? 3.3 : fuel === "diesel" ? 4.9 : (activeMode === "bike" ? 2.1 : activeMode === "truck" ? 11.5 : 6.1);
+      const toll = (activeMode === "car" || activeMode === "truck") && distKm > 25 ? Math.round(distKm * (activeMode === "truck" ? 3.2 : 1.55)) : 0;
+      const total = Math.max(5, Math.round(distKm * perKm + toll));
+      return toll > 0 ? `₹${total.toLocaleString("en-IN")} (incl. ₹${toll} Toll)` : `Est. Fuel: ₹${total.toLocaleString("en-IN")}`;
+    }
+
+    function formatManeuverText(step) {
+      const m = step.maneuver || {};
+      const road = step.name ? ` onto ${step.name}` : "";
+      if (m.type === "depart") return `Head ${m.modifier || "straight"}${road}`;
+      if (m.type === "arrive") return `Arrive at ${destObj?.name || "destination"}`;
+      if (m.modifier && m.modifier.includes("left")) return `Turn left${road}`;
+      if (m.modifier && m.modifier.includes("right")) return `Turn right${road}`;
+      return `Continue straight${road}`;
+    }
+
+    function renderRouteOptions() {
+      const container = document.getElementById("routesListContainer");
+      container.innerHTML = "";
+      document.getElementById("routeCountBadge").textContent = computedRoutes.length;
+      computedRoutes.forEach((rt, idx) => {
+        const distKm = rt.distance / 1000;
+        let durSec = rt.duration;
+        if (activeMode === "bike") durSec *= 0.86;
+        if (activeMode === "truck") durSec *= 1.18;
+        const mins = Math.max(1, Math.round(durSec / 60));
+        const timeStr = mins >= 60 ? `${Math.floor(mins / 60)} hr ${mins % 60} min` : `${mins} min`;
+        const card = document.createElement("div");
+        card.className = "route-option" + (idx === selectedRouteIdx ? " selected" : "");
+        card.innerHTML = activeMode === "metro"
+          ? `<div><div style="font-weight:800;font-size:0.88rem;">${timeStr} <span style="color:#64748b;font-weight:600;">(${distKm.toFixed(1)} km)</span></div><div style="margin-top:5px;"><span class="transit-badge" style="background:#7c3aed;">Metro Line</span><span class="transit-badge" style="background:#dc2626;">City Bus / Auto</span></div></div><div style="font-weight:800;color:#047857;font-size:0.82rem;text-align:right;">${calcTripCostInr(distKm)}</div>`
+          : `<div><div style="font-weight:800;font-size:0.94rem;color:#047857;">${timeStr}</div><div style="font-size:0.76rem;color:#64748b;font-weight:600;">${distKm.toFixed(1)} km • ${idx === 0 ? "Fastest Route" : "Alternate Route"}</div></div><div style="text-align:right;"><div style="font-weight:800;font-size:0.8rem;color:#0f172a;">${calcTripCostInr(distKm)}</div><div style="font-size:0.68rem;color:#64748b;text-transform:uppercase;">${activeMode === "walk" ? "Walking" : document.getElementById("fuelTypeSelect").value}</div></div>`;
+        card.onclick = () => { selectedRouteIdx = idx; renderRouteOptions(); };
+        container.appendChild(card);
+      });
+      if (computedRoutes[selectedRouteIdx]) {
+        const rt = computedRoutes[selectedRouteIdx];
+        activeRouteGeoJson = { type: "Feature", geometry: rt.geometry };
+        if (map.getSource("route-src")) map.getSource("route-src").setData(activeRouteGeoJson);
+        const coords = rt.geometry.coordinates;
+        const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
+        map.fitBounds(bounds, { padding: { top: 165, bottom: 260, left: 36, right: 36 }, pitch: detailsState.buildings3d ? 44 : 0 });
+        document.getElementById("turnStepsList").innerHTML = rt.legs[0].steps.map((s) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9;"><span>${formatManeuverText(s)}</span><strong style="color:#64748b;flex-shrink:0;">${s.distance >= 1000 ? (s.distance / 1000).toFixed(1) + " km" : Math.round(s.distance) + " m"}</strong></div>`).join("");
+      }
+    }
+
+    document.getElementById("toggleStepsBtn").addEventListener("click", () => {
+      const el = document.getElementById("turnStepsList");
+      el.style.display = el.style.display === "none" ? "block" : "none";
+    });
+
+    function speakTurn(enText, hiText) {
+      if (voiceMode === "off" || !("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(voiceMode === "hi" ? hiText : enText);
+      u.lang = voiceMode === "hi" ? "hi-IN" : "en-IN";
+      window.speechSynthesis.speak(u);
+    }
+
+    function updateTurnArrow(modifier) {
+      const svg = document.getElementById("turnArrowSvg");
+      if (modifier && modifier.includes("left")) svg.innerHTML = '<path d="M16 19v-7a4 4 0 0 0-4-4H5"/><path d="m9 4-4 4 4 4"/>';
+      else if (modifier && modifier.includes("right")) svg.innerHTML = '<path d="M8 19v-7a4 4 0 0 1 4-4h7"/><path d="m15 4 4 4-4 4"/>';
+      else svg.innerHTML = '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>';
+    }
+
+    document.getElementById("voiceLangBtn").addEventListener("click", () => {
+      voiceMode = voiceMode === "en" ? "hi" : voiceMode === "hi" ? "off" : "en";
+      const label = voiceMode === "en" ? "EN Voice" : voiceMode === "hi" ? "Hinglish" : "Muted";
+      document.getElementById("voiceLangBtn").textContent = label;
+      showToast(`Voice: ${label}`);
+    });
+
+    document.getElementById("startNavBtn").addEventListener("click", () => {
+      const rt = computedRoutes[selectedRouteIdx];
+      if (!rt) return;
+      isNavigating = true;
+      document.getElementById("routeHeaderPanel").style.display = "none";
+      document.getElementById("routesSheet").style.display = "none";
+      document.getElementById("rightUpperStack").style.display = "none";
+      document.getElementById("turnBanner").style.display = "flex";
+      document.getElementById("speedCluster").style.display = "flex";
+      document.getElementById("navFooter").style.display = "flex";
+      document.getElementById("safetyPopup").style.display = "block";
+      document.getElementById("safetyConfirmBar").style.display = "flex";
+
+      const steps = rt.legs[0].steps;
+      const nextStep = steps[1] || steps[0];
+      const firstDist = steps[0] ? `${Math.max(10, Math.round(steps[0].distance))} m` : "Go";
+      document.getElementById("hudDist").textContent = firstDist;
+      document.getElementById("hudInstruction").textContent = formatManeuverText(nextStep);
+      updateTurnArrow(nextStep.maneuver?.modifier);
+
+      const totalMin = Math.max(1, Math.round(rt.duration / 60));
+      const eta = new Date(Date.now() + totalMin * 60000);
+      document.getElementById("footerEta").textContent = `${totalMin} min`;
+      document.getElementById("footerSub").textContent = `${(rt.distance / 1000).toFixed(1)} km • ETA ${eta.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      document.getElementById("junctionSignText").textContent = (destObj?.name || "Main Flyover").slice(0, 16);
+
+      const coords = rt.geometry.coordinates;
+      const initBearing = coords.length > 1 ? (Math.atan2(coords[1][0] - coords[0][0], coords[1][1] - coords[0][1]) * 180) / Math.PI : 0;
+      map.flyTo({ center: coords[0], zoom: 17.2, pitch: 52, bearing: initBearing, duration: 900 });
+      speakTurn(`Navigation started. ${formatManeuverText(nextStep)}`, `Navigation shuru ho gaya hai.`);
+
+      if (navigator.geolocation) {
+        gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (simInterval) return;
+            const livePt = [pos.coords.longitude, pos.coords.latitude];
+            userCoords = livePt;
+            userMarker.setLngLat(livePt);
+            document.getElementById("liveSpeedVal").textContent = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+            map.easeTo({ center: livePt, bearing: pos.coords.heading || map.getBearing(), pitch: 52, zoom: 17.2, duration: 500 });
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 1000 }
+        );
+      }
+    });
+
+    document.getElementById("toggleJunctionBtn").addEventListener("click", () => {
+      const jc = document.getElementById("junctionCard");
+      jc.style.display = jc.style.display === "block" ? "none" : "block";
+    });
+    document.getElementById("dismissConfirmBtn").addEventListener("click", () => { document.getElementById("safetyConfirmBar").style.display = "none"; });
+    document.getElementById("confirmNoBtn").addEventListener("click", () => { document.getElementById("safetyConfirmBar").style.display = "none"; document.getElementById("safetyPopup").style.display = "none"; showToast("Marked alert cleared"); });
+    document.getElementById("confirmYesBtn").addEventListener("click", () => { document.getElementById("safetyConfirmBar").style.display = "none"; showToast("Alert verified"); });
+
+    document.getElementById("simDriveBtn").addEventListener("click", () => {
+      const rt = computedRoutes[selectedRouteIdx];
+      if (!rt) return;
+      if (simInterval) { clearInterval(simInterval); simInterval = null; document.getElementById("simDriveBtn").textContent = "Simulate Drive"; return; }
+      document.getElementById("simDriveBtn").textContent = "Pause Sim";
+      document.getElementById("junctionCard").style.display = "block";
+      const coords = rt.geometry.coordinates;
+      const steps = rt.legs[0].steps;
+      let idx = 0;
+      simInterval = setInterval(() => {
+        if (idx >= coords.length - 1) {
+          clearInterval(simInterval); simInterval = null;
+          document.getElementById("simDriveBtn").textContent = "Simulate Drive";
+          document.getElementById("hudDist").textContent = "Arrived";
+          document.getElementById("liveSpeedVal").textContent = "0";
+          speakTurn("You have arrived.", "Aap apni manzil par pahunch gaye hain.");
+          return;
+        }
+        const p1 = coords[idx], p2 = coords[idx + 1];
+        const bearing = (Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180) / Math.PI;
+        userMarker.setLngLat(p1);
+        map.easeTo({ center: p1, bearing, pitch: 52, zoom: 17.2, duration: 400 });
+        document.getElementById("liveSpeedVal").textContent = Math.floor(42 + Math.random() * 14);
+        const progress = idx / coords.length;
+        const currStep = steps[Math.min(steps.length - 1, Math.floor(progress * steps.length))];
+        const remM = Math.max(10, Math.round(currStep.distance * (1 - ((progress * steps.length) % 1))));
+        document.getElementById("hudDist").textContent = `${remM} m`;
+        document.getElementById("hudInstruction").textContent = formatManeuverText(currStep);
+        updateTurnArrow(currStep.maneuver?.modifier);
+        document.getElementById("junctionDistText").textContent = `${Math.min(250, remM)} m`;
+        idx++;
+      }, 440);
+    });
+
+    document.getElementById("exitNavBtn").addEventListener("click", () => {
+      isNavigating = false;
+      if (simInterval) { clearInterval(simInterval); simInterval = null; }
+      if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+      document.getElementById("simDriveBtn").textContent = "Simulate Drive";
+      ["turnBanner", "junctionCard", "speedCluster", "safetyPopup", "safetyConfirmBar", "navFooter"].forEach((id) => {
+        document.getElementById(id).style.display = "none";
+      });
+      document.getElementById("topSearchWrap").style.display = "block";
+      document.getElementById("rightUpperStack").style.display = "flex";
+      exploreDock.style.display = "block";
+      setMapFabsVisible(true);
+      map.flyTo({ pitch: detailsState.buildings3d ? 48 : 0, bearing: 0, zoom: 15.2 });
+    });
+
+    // --- 10. GEOTAG CAMERA (WITH LIVE MAP SNAPSHOT) & QR MATRIX ---
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+    }
+
+    function drawQrMatrix(ctx, x, y, size, seedStr) {
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = "#0f172a";
+      const cells = 11, cell = size / cells;
+      let hash = 2166136261;
+      for (let i = 0; i < seedStr.length; i++) { hash ^= seedStr.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+      for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+          const isFinder = (r < 3 && c < 3) || (r < 3 && c > 7) || (r > 7 && c < 3);
+          if (isFinder || (((hash >>> ((r * cells + c) % 31)) & 1) === 1)) ctx.fillRect(x + c * cell, y + r * cell, cell - 0.5, cell - 0.5);
+        }
+      }
+    }
+
+    function renderGeotagCard(bgImg = null) {
+      const canvas = document.getElementById("geotagCanvas");
+      const ctx = canvas.getContext("2d");
+      const lat = destObj ? destObj.lat : map.getCenter().lat;
+      const lon = destObj ? destObj.lng : map.getCenter().lng;
+      const digi = encodeDigiPin(lat, lon);
+      const name = destObj ? destObj.name : document.getElementById("dockAreaTitle").textContent;
+      const addr = destObj ? destObj.addr : "India";
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (bgImg) {
+        const s = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+        ctx.drawImage(bgImg, (canvas.width - bgImg.width * s) / 2, (canvas.height - bgImg.height * s) / 2, bgImg.width * s, bgImg.height * s);
+      } else {
+        try {
+          const mapCanvas = map.getCanvas();
+          ctx.drawImage(mapCanvas, 0, 0, canvas.width, canvas.height);
+        } catch (_) {
+          const g = ctx.createLinearGradient(0, 0, 340, 250);
+          g.addColorStop(0, "#064e3b"); g.addColorStop(1, "#0f172a");
+          ctx.fillStyle = g; ctx.fillRect(0, 0, 340, 250);
+        }
+      }
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
+      drawRoundRect(ctx, 12, 12, 316, 92, 12); ctx.fill();
+      ctx.fillStyle = "#047857"; ctx.font = "bold 12px sans-serif"; ctx.fillText(`DIGIPIN: ${digi}`, 22, 31);
+      ctx.fillStyle = "#0f172a"; ctx.font = "bold 11px sans-serif"; ctx.fillText(name.slice(0, 31), 22, 47);
+      ctx.fillStyle = "#475569"; ctx.font = "10px sans-serif"; ctx.fillText(addr.slice(0, 34), 22, 62);
+      ctx.font = "10px monospace"; ctx.fillText(`${lat.toFixed(5)}°N, ${lon.toFixed(5)}°E`, 22, 77);
+      ctx.fillText(`${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`, 22, 92);
+      drawQrMatrix(ctx, 252, 22, 68, digi);
+    }
+
+    function openGeotagModal(title) {
+      document.getElementById("modalHeaderTitle").textContent = title;
+      document.getElementById("geotagModal").style.display = "flex";
+      renderGeotagCard();
+    }
+    document.getElementById("openGeotagCamBtn").addEventListener("click", () => openGeotagModal("BharatPin Geotag Camera"));
+    document.getElementById("geotagHereBtn").addEventListener("click", () => openGeotagModal("Geotag Location Card"));
+    document.getElementById("qrPinBtn").addEventListener("click", () => openGeotagModal("Official DIGIPIN QR"));
+    document.getElementById("photoFileInput").addEventListener("change", (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const img = new Image();
+      img.onload = () => renderGeotagCard(img);
+      img.src = URL.createObjectURL(f);
+    });
+    document.getElementById("downloadGeotagBtn").addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.download = `BharatPin-${Date.now()}.png`;
+      a.href = document.getElementById("geotagCanvas").toDataURL("image/png");
+      a.click();
+      showToast("Geotag PNG saved");
+    });
+    document.getElementById("closeModalBtn").addEventListener("click", () => {
+      document.getElementById("geotagModal").style.display = "none";
+    });
+
+    // --- 11. FAST PHOTON POIS & SAFETY ALERTS ---
+    const POI_QUERIES = {
+      restaurant: "restaurant dhaba",
+      fuel: "petrol pump",
+      hotel: "hotel",
+      shopping: "shopping market mall",
+      hospital: "hospital",
+      atm: "ATM bank",
+      station: "railway station"
+    };
+
+    document.querySelectorAll(".cat-chip[data-amenity]").forEach((chip) => {
+      chip.addEventListener("click", async () => {
+        const wasActive = chip.classList.contains("active");
+        document.querySelectorAll(".cat-chip[data-amenity]").forEach((c) => c.classList.remove("active"));
+        poiMarkers.forEach((m) => m.remove());
+        poiMarkers = [];
+        if (wasActive) return;
+
+        chip.classList.add("active");
+        const term = POI_QUERIES[chip.dataset.amenity] || chip.textContent.trim();
+        const c = map.getCenter();
+        showToast(`Searching nearby ${chip.textContent.trim()}...`);
+        try {
+          const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&lat=${c.lat}&lon=${c.lng}&limit=12`);
+          const data = await res.json();
+          const feats = (data.features || []).filter((f) => {
+            const [lon, lat] = f.geometry.coordinates;
+            return Math.abs(lat - c.lat) < 0.22 && Math.abs(lon - c.lng) < 0.22;
+          });
+          if (!feats.length) { showToast(`No ${chip.textContent.trim()} found nearby`); return; }
+          feats.forEach((f) => {
+            const [lon, lat] = f.geometry.coordinates;
+            const p = f.properties || {};
+            const title = p.name || chip.textContent.trim();
+            const addr = [p.street, p.city, p.state].filter(Boolean).join(", ") || "India";
+            const m = new maplibregl.Marker({ color: "#047857" }).setLngLat([lon, lat]).addTo(map);
+            m.getElement().onclick = (ev) => { ev.stopPropagation(); openPlaceDetails(lon, lat, title, addr); };
+            poiMarkers.push(m);
+          });
+          showToast(`Found ${feats.length} ${chip.textContent.trim()} spots`);
+        } catch (_) {
+          showToast("Check internet connection and retry");
+        }
+      });
+    });
+
+    function renderSavedHazards() {
+      hazardMarkers.forEach((m) => m.remove());
+      hazardMarkers = [];
+      JSON.parse(localStorage.getItem("bp_hazards") || "[]").forEach((h) => {
+        const el = document.createElement("div");
+        el.style.cssText = "width:26px;height:26px;border-radius:50%;background:#ffffff;border:2px solid #dc2626;display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,0.25);cursor:pointer;";
+        el.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.6"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        el.onclick = (ev) => { ev.stopPropagation(); showToast(`Reported: ${h.type}`); };
+        hazardMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([h.lng, h.lat]).addTo(map));
+      });
+    }
+
+    document.getElementById("reportAlertBtn").addEventListener("click", () => { document.getElementById("reportModal").style.display = "flex"; });
+    document.getElementById("closeReportModalBtn").addEventListener("click", () => { document.getElementById("reportModal").style.display = "none"; });
+    document.querySelectorAll(".hazard-opt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const type = btn.dataset.hazard;
+        const c = map.getCenter();
+        const saved = JSON.parse(localStorage.getItem("bp_hazards") || "[]");
+        saved.push({ lng: c.lng, lat: c.lat, type });
+        localStorage.setItem("bp_hazards", JSON.stringify(saved.slice(-25)));
+        renderSavedHazards();
+        document.getElementById("reportModal").style.display = "none";
+        showToast(`Pinned ${type} alert at map center`);
+      });
+    });
+  </script>
+</body>
+</html>

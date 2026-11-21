@@ -1,0 +1,9 @@
+{
+  "name": "BharatPin 3D — India Navigation",
+  "short_name": "BharatPin",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#060b16",
+  "theme_color": "#060b16",
+  "icons": []
+}
